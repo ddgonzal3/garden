@@ -5,6 +5,7 @@ import SwiftUI
 @MainActor
 class BacklogStore: ObservableObject {
     @Published var backlog: Backlog = Backlog()
+    @Published var editingItemId: UUID?
 
     private let fileURL: URL
     private var fileWatcher: DispatchSourceFileSystemObject?
@@ -105,6 +106,24 @@ class BacklogStore: ObservableObject {
         save()
     }
 
+    func addItemToTop(_ item: GardenItem, inProject projectId: UUID? = nil) {
+        guard let idx = projectIndex(for: projectId) else { return }
+        var newItem = item
+        // Shift existing items in category to make room at position 0
+        for i in backlog.projects[idx].items.indices {
+            if backlog.projects[idx].items[i].category == newItem.category && !backlog.projects[idx].items[i].isCompleted {
+                backlog.projects[idx].items[i].priority += 1
+            }
+        }
+        newItem.priority = 0
+        backlog.projects[idx].items.append(newItem)
+        if !backlog.projects[idx].categories.contains(newItem.category) {
+            backlog.projects[idx].categories.append(newItem.category)
+        }
+        editingItemId = newItem.id
+        save()
+    }
+
     func updateItem(_ item: GardenItem) {
         for idx in backlog.projects.indices {
             if let itemIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == item.id }) {
@@ -165,6 +184,29 @@ class BacklogStore: ObservableObject {
                 return
             }
         }
+    }
+
+    func moveItemToCategory(_ itemId: UUID, newCategory: String) {
+        guard let idx = projectIndex() else { return }
+        guard let itemIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == itemId }) else { return }
+        guard backlog.projects[idx].items[itemIdx].category != newCategory else { return }
+
+        backlog.projects[idx].items[itemIdx].category = newCategory
+
+        // Shift existing items in new category to make room at top
+        for i in backlog.projects[idx].items.indices {
+            if backlog.projects[idx].items[i].category == newCategory
+                && backlog.projects[idx].items[i].id != itemId
+                && !backlog.projects[idx].items[i].isCompleted {
+                backlog.projects[idx].items[i].priority += 1
+            }
+        }
+        backlog.projects[idx].items[itemIdx].priority = 0
+
+        if !backlog.projects[idx].categories.contains(newCategory) {
+            backlog.projects[idx].categories.append(newCategory)
+        }
+        save()
     }
 
     // MARK: - Category mutations

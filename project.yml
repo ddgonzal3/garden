@@ -25,3 +25,15 @@ targets:
         GENERATE_INFOPLIST_FILE: true
         CODE_SIGN_ENTITLEMENTS: Garden/Garden.entitlements
         CODE_SIGN_STYLE: Automatic
+  GardenUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - GardenUITests
+    dependencies:
+      - target: Garden
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.danny.garden.uitests
+        GENERATE_INFOPLIST_FILE: true
+        CODE_SIGN_STYLE: Automatic

@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		061FD8F44554DEF7F627E208 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE5AA91A1EDF1014B6A689B8 /* DebugLog.swift */; };
 		105F72F4B3EAB9320813CF63 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778F84809790C502F6F828D7 /* KeychainService.swift */; };
 		17C51D9E62AD9FDDD2C3C101 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AAA201429ADFA122A77BE6 /* SettingsView.swift */; };
+		2B75463257A570DC932C1137 /* AllItemsNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 259C65EA67FA5483ABC338F9 /* AllItemsNavigationTests.swift */; };
 		30244A95D44A34FD70EF09C6 /* BacklogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC30797F24C88F63610ABCBC /* BacklogStore.swift */; };
 		48E6D5F1F0560E9EA5E59976 /* Backlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89A21EBB852501EBE385C17 /* Backlog.swift */; };
 		4903A02E80D42F12A5FD95E1 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */; };
@@ -16,23 +18,36 @@
 		56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDBDA24A5A9254B6D172F1C /* ContentView.swift */; };
 		680B9A0BD89FE5DD6FCC3D2F /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AEC4564AA9412061E81145 /* AgentChatView.swift */; };
 		88B405E2129542EC28ED5CD9 /* GardenItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */; };
-		A1C2D3E4F5A6B7C8D9E0F1A2 /* GardenProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* GardenProject.swift */; };
 		89AE60F27C1CAD0FC99F7C58 /* CategoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6DCEA52CA304E0117943BD /* CategoryDetailView.swift */; };
+		8E49B4817226A877E8E8B589 /* AddProjectSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A2E4BB29883AF17EB94A4C0 /* AddProjectSheet.swift */; };
 		9DF91EF743D954139F51E045 /* AddItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B13480465DB52DF36594F6 /* AddItemSheet.swift */; };
 		ABDE7E60B98169B5C205BD9B /* AddCategorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */; };
-		C3D4E5F6A7B8C9D0E1F2A3B4 /* AddProjectSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* AddProjectSheet.swift */; };
 		B7BCD7D673A7C6ED1D34EA55 /* AllItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD5888356A710FD504A62143 /* AllItemsView.swift */; };
 		BEFCBE37EDE89B00C5210FE0 /* GardenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCBE0D40AD4912CCD509C3D /* GardenApp.swift */; };
 		D6A5BCCBBD4482B57CB51B2E /* ItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7237629BDEC9C10C538B31 /* ItemRow.swift */; };
 		DA9AC228ADDEF2BADF30A89A /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */; };
+		F90FD51CBE8476D2E30C474D /* GardenProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3671CD5AB962895D10CA77D5 /* GardenProject.swift */; };
 		FFFF69F6E60BB0249C0FD2BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D8D69B362186AB5F8A665668 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		06DE1D5A0BFF608F36ECCBC0 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9C89891E67C891CD8A1D44BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = F7BA5196D1C7BD577FF87DBA;
+			remoteInfo = Garden;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		02C59649B1EB3657E43C1662 /* Garden.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Garden.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		033A4080AE9512295A5FEF33 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		1A7237629BDEC9C10C538B31 /* ItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRow.swift; sourceTree = "<group>"; };
+		259C65EA67FA5483ABC338F9 /* AllItemsNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllItemsNavigationTests.swift; sourceTree = "<group>"; };
+		2A2E4BB29883AF17EB94A4C0 /* AddProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProjectSheet.swift; sourceTree = "<group>"; };
 		32B13480465DB52DF36594F6 /* AddItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemSheet.swift; sourceTree = "<group>"; };
+		3671CD5AB962895D10CA77D5 /* GardenProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenProject.swift; sourceTree = "<group>"; };
 		4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
 		53AAA201429ADFA122A77BE6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		70AEC4564AA9412061E81145 /* AgentChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatView.swift; sourceTree = "<group>"; };
@@ -40,10 +55,10 @@
 		778F84809790C502F6F828D7 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		8BCBE0D40AD4912CCD509C3D /* GardenApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenApp.swift; sourceTree = "<group>"; };
 		9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategorySheet.swift; sourceTree = "<group>"; };
-		D4E5F6A7B8C9D0E1F2A3B4C5 /* AddProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProjectSheet.swift; sourceTree = "<group>"; };
 		A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenItem.swift; sourceTree = "<group>"; };
-		B2C3D4E5F6A7B8C9D0E1F2A3 /* GardenProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenProject.swift; sourceTree = "<group>"; };
+		BE5AA91A1EDF1014B6A689B8 /* DebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLog.swift; sourceTree = "<group>"; };
+		C5BED54BA5FDAAE5C4C411D3 /* GardenUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = GardenUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D8D69B362186AB5F8A665668 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DC30797F24C88F63610ABCBC /* BacklogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BacklogStore.swift; sourceTree = "<group>"; };
 		ECDBDA24A5A9254B6D172F1C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -57,6 +72,7 @@
 			isa = PBXGroup;
 			children = (
 				02C59649B1EB3657E43C1662 /* Garden.app */,
+				C5BED54BA5FDAAE5C4C411D3 /* GardenUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -66,6 +82,7 @@
 			children = (
 				A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */,
 				DC30797F24C88F63610ABCBC /* BacklogStore.swift */,
+				BE5AA91A1EDF1014B6A689B8 /* DebugLog.swift */,
 				778F84809790C502F6F828D7 /* KeychainService.swift */,
 			);
 			path = Services;
@@ -89,7 +106,7 @@
 			children = (
 				9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */,
 				32B13480465DB52DF36594F6 /* AddItemSheet.swift */,
-				D4E5F6A7B8C9D0E1F2A3B4C5 /* AddProjectSheet.swift */,
+				2A2E4BB29883AF17EB94A4C0 /* AddProjectSheet.swift */,
 				70AEC4564AA9412061E81145 /* AgentChatView.swift */,
 				FD5888356A710FD504A62143 /* AllItemsView.swift */,
 				FA6DCEA52CA304E0117943BD /* CategoryDetailView.swift */,
@@ -101,13 +118,21 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		946896BC5E949D6FC7AE941E /* GardenUITests */ = {
+			isa = PBXGroup;
+			children = (
+				259C65EA67FA5483ABC338F9 /* AllItemsNavigationTests.swift */,
+			);
+			path = GardenUITests;
+			sourceTree = "<group>";
+		};
 		AD504151CA8E01DEDD466D39 /* Models */ = {
 			isa = PBXGroup;
 			children = (
 				F89A21EBB852501EBE385C17 /* Backlog.swift */,
 				4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */,
 				BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */,
-				B2C3D4E5F6A7B8C9D0E1F2A3 /* GardenProject.swift */,
+				3671CD5AB962895D10CA77D5 /* GardenProject.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -116,6 +141,7 @@
 			isa = PBXGroup;
 			children = (
 				5830BE73AF3E6C3ADB3F2DA2 /* Garden */,
+				946896BC5E949D6FC7AE941E /* GardenUITests */,
 				28E2A05C420CF77B56B004C9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -123,6 +149,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		13464506F83E686C9EBC16E4 /* GardenUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9DE3F4ECE841432EB30B2F47 /* Build configuration list for PBXNativeTarget "GardenUITests" */;
+			buildPhases = (
+				54B32B14A092D41BC9351E6A /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0D06E869B2B3B707B9E8B1F2 /* PBXTargetDependency */,
+			);
+			name = GardenUITests;
+			packageProductDependencies = (
+			);
+			productName = GardenUITests;
+			productReference = C5BED54BA5FDAAE5C4C411D3 /* GardenUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		F7BA5196D1C7BD577FF87DBA /* Garden */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 894007E947D7E72607CCD1C3 /* Build configuration list for PBXNativeTarget "Garden" */;
@@ -150,6 +194,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
+					13464506F83E686C9EBC16E4 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = F7BA5196D1C7BD577FF87DBA;
+					};
 					F7BA5196D1C7BD577FF87DBA = {
 						ProvisioningStyle = Automatic;
 					};
@@ -170,6 +218,7 @@
 			projectRoot = "";
 			targets = (
 				F7BA5196D1C7BD577FF87DBA /* Garden */,
+				13464506F83E686C9EBC16E4 /* GardenUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -192,7 +241,7 @@
 			files = (
 				ABDE7E60B98169B5C205BD9B /* AddCategorySheet.swift in Sources */,
 				9DF91EF743D954139F51E045 /* AddItemSheet.swift in Sources */,
-				C3D4E5F6A7B8C9D0E1F2A3B4 /* AddProjectSheet.swift in Sources */,
+				8E49B4817226A877E8E8B589 /* AddProjectSheet.swift in Sources */,
 				680B9A0BD89FE5DD6FCC3D2F /* AgentChatView.swift in Sources */,
 				DA9AC228ADDEF2BADF30A89A /* AgentService.swift in Sources */,
 				B7BCD7D673A7C6ED1D34EA55 /* AllItemsView.swift in Sources */,
@@ -201,9 +250,10 @@
 				89AE60F27C1CAD0FC99F7C58 /* CategoryDetailView.swift in Sources */,
 				4903A02E80D42F12A5FD95E1 /* ChatMessage.swift in Sources */,
 				56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */,
+				061FD8F44554DEF7F627E208 /* DebugLog.swift in Sources */,
 				BEFCBE37EDE89B00C5210FE0 /* GardenApp.swift in Sources */,
 				88B405E2129542EC28ED5CD9 /* GardenItem.swift in Sources */,
-				A1C2D3E4F5A6B7C8D9E0F1A2 /* GardenProject.swift in Sources */,
+				F90FD51CBE8476D2E30C474D /* GardenProject.swift in Sources */,
 				D6A5BCCBBD4482B57CB51B2E /* ItemRow.swift in Sources */,
 				105F72F4B3EAB9320813CF63 /* KeychainService.swift in Sources */,
 				17C51D9E62AD9FDDD2C3C101 /* SettingsView.swift in Sources */,
@@ -211,7 +261,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		54B32B14A092D41BC9351E6A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2B75463257A570DC932C1137 /* AllItemsNavigationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0D06E869B2B3B707B9E8B1F2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = F7BA5196D1C7BD577FF87DBA /* Garden */;
+			targetProxy = 06DE1D5A0BFF608F36ECCBC0 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		0F1052B8F1FF054D2627EFA6 /* Release */ = {
@@ -312,6 +378,24 @@
 			};
 			name = Debug;
 		};
+		CC1E9FDB1F173E7604C718F0 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.danny.garden.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Garden;
+			};
+			name = Debug;
+		};
 		D183FDAF6A0BF5113B2FD30D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -375,6 +459,24 @@
 			};
 			name = Debug;
 		};
+		FB89837951EEE304269FA1FC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.danny.garden.uitests;
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = Garden;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -392,6 +494,15 @@
 			buildConfigurations = (
 				998DFC8F6909D7300D3AC23A /* Debug */,
 				10582863320DF3E9D4F9E0FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9DE3F4ECE841432EB30B2F47 /* Build configuration list for PBXNativeTarget "GardenUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CC1E9FDB1F173E7604C718F0 /* Debug */,
+				FB89837951EEE304269FA1FC /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

@@ -49,4 +49,10 @@ pkill -x Garden 2>/dev/null || true
 sleep 0.5
 
 echo "[run] Opening $APP_PATH..."
-open "$APP_PATH"
+if [ -n "$GARDEN_ANTHROPIC_KEY" ]; then
+  # Launch directly so env vars pass through (open doesn't forward them)
+  "$APP_PATH/Contents/MacOS/Garden" &
+  disown
+else
+  open "$APP_PATH"
+fi

@@ -4,35 +4,33 @@ struct AllItemsView: View {
     @EnvironmentObject var store: BacklogStore
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 16) {
-                ForEach(store.backlog.categories, id: \.self) { category in
-                    let items = store.backlog.items(in: category)
-                    if !items.isEmpty {
-                        CategorySection(category: category, items: items)
+        let _ = debugLog("[AllItemsView] body — categories: \(store.backlog.categories.count), activeItems: \(store.backlog.activeItems.count)")
+        List {
+            ForEach(store.backlog.categories, id: \.self) { category in
+                let items = store.backlog.items(in: category)
+                if !items.isEmpty {
+                    Section {
+                        ForEach(items) { item in
+                            ItemRow(item: item)
+                        }
+                    } header: {
+                        HStack {
+                            Text(category)
+                            Spacer()
+                            Button(action: {
+                                let newItem = GardenItem(title: "", category: category)
+                                store.addItemToTop(newItem)
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
-            .padding()
         }
-        .navigationBarBackButtonHidden()
-    }
-}
-
-struct CategorySection: View {
-    let category: String
-    let items: [GardenItem]
-    @EnvironmentObject var store: BacklogStore
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(category)
-                .font(.headline)
-                .foregroundStyle(.secondary)
-
-            ForEach(items) { item in
-                ItemRow(item: item)
-            }
-        }
+        .listStyle(.plain)
     }
 }
