@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var selectedCategory: String? = nil
     @State private var showingAddItem = false
     @State private var showingAddCategory = false
+    @State private var showingAddProject = false
     @State private var showingChat = true
 
     var body: some View {
@@ -13,7 +14,8 @@ struct ContentView: View {
             NavigationSplitView {
                 SidebarView(
                     selectedCategory: $selectedCategory,
-                    showingAddCategory: $showingAddCategory
+                    showingAddCategory: $showingAddCategory,
+                    showingAddProject: $showingAddProject
                 )
             } detail: {
                 Group {
@@ -54,11 +56,17 @@ struct ContentView: View {
         .sheet(isPresented: $showingAddCategory) {
             AddCategorySheet()
         }
+        .sheet(isPresented: $showingAddProject) {
+            AddProjectSheet()
+        }
+        .onChange(of: store.backlog.activeProjectId) {
+            selectedCategory = nil
+        }
         .frame(minWidth: 800, minHeight: 500)
     }
 
     private var detailTitle: String {
-        guard let cat = selectedCategory else { return "Garden" }
+        guard let cat = selectedCategory else { return store.backlog.activeProject?.name ?? "Garden" }
         return cat == "__completed__" ? "Completed" : cat
     }
 }

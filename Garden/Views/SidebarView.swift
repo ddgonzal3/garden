@@ -4,9 +4,35 @@ struct SidebarView: View {
     @EnvironmentObject var store: BacklogStore
     @Binding var selectedCategory: String?
     @Binding var showingAddCategory: Bool
+    @Binding var showingAddProject: Bool
+
+    private var projectBinding: Binding<UUID> {
+        Binding(
+            get: { store.backlog.activeProjectId ?? store.backlog.projects.first?.id ?? UUID() },
+            set: { store.switchProject($0) }
+        )
+    }
 
     var body: some View {
         List(selection: $selectedCategory) {
+            Section {
+                HStack(spacing: 6) {
+                    Picker("Project", selection: projectBinding) {
+                        ForEach(store.backlog.projects) { project in
+                            Text(project.name).tag(project.id)
+                        }
+                    }
+                    .labelsHidden()
+
+                    Button(action: { showingAddProject = true }) {
+                        Image(systemName: "plus")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .help("New project")
+                }
+            }
+
             Section {
                 NavigationLink(value: nil as String?) {
                     Label {
