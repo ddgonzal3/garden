@@ -3,9 +3,10 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var store: BacklogStore
     @EnvironmentObject var agent: AgentService
-    @State private var selectedCategory: String? = nil
+    @State private var selectedCategory: SidebarSelection? = .all
     @State private var showingAddItem = false
     @State private var showingAddCategory = false
+    @State private var showingAddProject = false
     @State private var showingChat = true
 
     var body: some View {
@@ -13,17 +14,11 @@ struct ContentView: View {
             NavigationSplitView {
                 SidebarView(
                     selectedCategory: $selectedCategory,
-                    showingAddCategory: $showingAddCategory
+                    showingAddCategory: $showingAddCategory,
+                    showingAddProject: $showingAddProject
                 )
             } detail: {
-                Group {
-                    if let category = selectedCategory {
-                        CategoryDetailView(category: category)
-                    } else {
-                        AllItemsView()
-                    }
-                }
-                .id(selectedCategory)
+                detailContent(for: selectedCategory ?? .all)
             }
             .navigationTitle(detailTitle)
 
@@ -49,16 +44,40 @@ struct ContentView: View {
             }
         }
         .sheet(isPresented: $showingAddItem) {
-            AddItemSheet(defaultCategory: selectedCategory)
+            AddItemSheet(defaultCategory: selectedCategory.flatMap {
+                if case .category(let cat) = $0 { return cat }
+                return nil
+            })
         }
         .sheet(isPresented: $showingAddCategory) {
             AddCategorySheet()
         }
+        .sheet(isPresented: $showingAddProject) {
+            AddProjectSheet()
+        }
+        .onChange(of: store.backlog.activeProjectId) {
+            selectedCategory = .all
+        }
         .frame(minWidth: 800, minHeight: 500)
     }
 
+    @ViewBuilder
+    private func detailContent(for selection: SidebarSelection) -> some View {
+        switch selection {
+        case .all:
+            AllItemsView()
+        case .category(let category):
+            CategoryDetailView(category: category)
+        case .completed:
+            CategoryDetailView(category: "__completed__")
+        }
+    }
+
     private var detailTitle: String {
-        guard let cat = selectedCategory else { return "Garden" }
-        return cat == "__completed__" ? "Completed" : cat
+        switch selectedCategory {
+        case .category(let cat): return cat
+        case .completed: return "Completed"
+        default: return store.backlog.activeProject?.name ?? "Garden"
+        }
     }
 }
