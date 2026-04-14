@@ -1,0 +1,9 @@
+{
+    "statusBar": [
+        "build.sh",
+        "run.sh"
+    ],
+    "statusBarRight": [
+        "sync.sh"
+    ]
+}
