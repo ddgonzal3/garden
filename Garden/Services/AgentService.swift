@@ -139,6 +139,8 @@ class AgentService: ObservableObject {
             result = addCategory(input)
         case "reorder_items":
             result = reorderItems(input)
+        case "reorder_categories":
+            result = reorderCategories(input)
         default:
             result = "Unknown tool: \(name)"
         }
@@ -175,7 +177,7 @@ class AgentService: ObservableObject {
         guard let idStr = input["id"] as? String, let id = UUID(uuidString: idStr) else {
             return "Error: valid id is required"
         }
-        guard var item = backlogStore.backlog.items.first(where: { $0.id == id }) else {
+        guard var item = backlogStore.backlog.activeItems.first(where: { $0.id == id }) else {
             return "Error: item not found"
         }
 
@@ -218,13 +220,16 @@ class AgentService: ObservableObject {
         }
 
         let uuids = orderedIds.compactMap { UUID(uuidString: $0) }
-        for (index, uuid) in uuids.enumerated() {
-            if let itemIndex = backlogStore.backlog.items.firstIndex(where: { $0.id == uuid }) {
-                backlogStore.backlog.items[itemIndex].priority = index
-            }
-        }
-        backlogStore.save()
+        backlogStore.reorderItems(in: category, orderedIds: uuids)
         return "Reordered \(uuids.count) items in \(category)"
+    }
+
+    private func reorderCategories(_ input: [String: Any]) -> String {
+        guard let orderedNames = input["category_names"] as? [String] else {
+            return "Error: category_names is required"
+        }
+        backlogStore.reorderCategories(orderedNames)
+        return "Reordered categories to: \(orderedNames.joined(separator: ", "))"
     }
 
     // MARK: - Helpers
@@ -260,8 +265,8 @@ class AgentService: ObservableObject {
         You are Garden, a personal task management assistant embedded in a native Mac app.
 
         You help organize, prioritize, and manage a backlog of tasks. You have tools to read \
-        the backlog, add items, update items, complete items, delete items, add categories, and \
-        reorder priorities.
+        the backlog, add items, update items, complete items, delete items, add categories, \
+        reorder item priorities, and reorder categories.
 
         Guidelines:
         - Be concise and direct
@@ -355,6 +360,17 @@ class AgentService: ObservableObject {
                         "item_ids": ["type": "array", "items": ["type": "string"], "description": "Item UUIDs in the desired priority order (first = highest priority)"],
                     ] as [String: Any],
                     "required": ["category", "item_ids"],
+                ],
+            ],
+            [
+                "name": "reorder_categories",
+                "description": "Reorder the sidebar categories by specifying all category names in the desired display order",
+                "input_schema": [
+                    "type": "object",
+                    "properties": [
+                        "category_names": ["type": "array", "items": ["type": "string"], "description": "Category names in the desired display order"],
+                    ] as [String: Any],
+                    "required": ["category_names"],
                 ],
             ],
         ]

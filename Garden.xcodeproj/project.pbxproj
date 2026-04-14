@@ -16,6 +16,7 @@
 		56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDBDA24A5A9254B6D172F1C /* ContentView.swift */; };
 		680B9A0BD89FE5DD6FCC3D2F /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AEC4564AA9412061E81145 /* AgentChatView.swift */; };
 		88B405E2129542EC28ED5CD9 /* GardenItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */; };
+		A1C2D3E4F5A6B7C8D9E0F1A2 /* GardenProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* GardenProject.swift */; };
 		89AE60F27C1CAD0FC99F7C58 /* CategoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6DCEA52CA304E0117943BD /* CategoryDetailView.swift */; };
 		9DF91EF743D954139F51E045 /* AddItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B13480465DB52DF36594F6 /* AddItemSheet.swift */; };
 		ABDE7E60B98169B5C205BD9B /* AddCategorySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */; };
@@ -40,6 +41,7 @@
 		9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategorySheet.swift; sourceTree = "<group>"; };
 		A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenItem.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* GardenProject.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenProject.swift; sourceTree = "<group>"; };
 		D8D69B362186AB5F8A665668 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DC30797F24C88F63610ABCBC /* BacklogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BacklogStore.swift; sourceTree = "<group>"; };
 		ECDBDA24A5A9254B6D172F1C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -102,6 +104,7 @@
 				F89A21EBB852501EBE385C17 /* Backlog.swift */,
 				4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */,
 				BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* GardenProject.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -196,6 +199,7 @@
 				56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */,
 				BEFCBE37EDE89B00C5210FE0 /* GardenApp.swift in Sources */,
 				88B405E2129542EC28ED5CD9 /* GardenItem.swift in Sources */,
+				A1C2D3E4F5A6B7C8D9E0F1A2 /* GardenProject.swift in Sources */,
 				D6A5BCCBBD4482B57CB51B2E /* ItemRow.swift in Sources */,
 				105F72F4B3EAB9320813CF63 /* KeychainService.swift in Sources */,
 				17C51D9E62AD9FDDD2C3C101 /* SettingsView.swift in Sources */,
