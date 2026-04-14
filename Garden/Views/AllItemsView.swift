@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 struct AllItemsView: View {
     @EnvironmentObject var store: BacklogStore
@@ -27,10 +28,34 @@ struct AllItemsView: View {
                             }
                             .buttonStyle(.plain)
                         }
+                        .padding(.trailing, 8)
                     }
                 }
             }
         }
         .listStyle(.plain)
+        .onAppear { ScrollViewHelper.configureAllScrollViews() }
+    }
+}
+
+/// Finds all NSScrollViews in the app and forces thin overlay scrollers.
+enum ScrollViewHelper {
+    static func configureAllScrollViews() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            for window in NSApp.windows {
+                applyOverlayStyle(to: window.contentView)
+            }
+        }
+    }
+
+    private static func applyOverlayStyle(to view: NSView?) {
+        guard let view = view else { return }
+        if let scrollView = view as? NSScrollView {
+            scrollView.scrollerStyle = .overlay
+            scrollView.scrollerKnobStyle = .light
+        }
+        for subview in view.subviews {
+            applyOverlayStyle(to: subview)
+        }
     }
 }

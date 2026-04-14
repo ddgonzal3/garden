@@ -31,41 +31,23 @@ enum KeychainService {
     static func save(_ key: String) {
         // Always save to local file so future loads skip keychain
         saveToFile(key)
-
-        guard !skipKeychain else { return }
-
-        let data = Data(key.utf8)
-
-        let deleteQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(deleteQuery as CFDictionary)
-
-        guard !key.isEmpty else { return }
-
-        let addQuery: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
-            kSecValueData as String: data,
-        ]
-        SecItemAdd(addQuery as CFDictionary, nil)
+        // Skip keychain entirely — local file is the primary store
     }
 
     static func load() -> String {
-        // 1. Environment variable
-        if let envKey = ProcessInfo.processInfo.environment["GARDEN_ANTHROPIC_KEY"], !envKey.isEmpty {
-            return envKey
-        }
-
-        // 2. Local file (~/.garden/api_key) — no permissions needed
+        // 1. Local file (~/.garden/api_key) — no permissions needed
         if let fileKey = loadFromFile() {
             return fileKey
         }
 
-        // 3. Keychain (fallback — may trigger permission prompt)
+        // 2. Environment variable (only works when launched from terminal)
+        if let envKey = ProcessInfo.processInfo.environment["GARDEN_ANTHROPIC_KEY"], !envKey.isEmpty {
+            // Persist to file so next launch doesn't need env var or keychain
+            saveToFile(envKey)
+            return envKey
+        }
+
+        // 3. Keychain (last resort — may trigger permission prompt)
         guard !skipKeychain else { return "" }
 
         let query: [String: Any] = [
@@ -80,6 +62,9 @@ enum KeychainService {
         let status = SecItemCopyMatching(query as CFDictionary, &result)
 
         guard status == errSecSuccess, let data = result as? Data else { return "" }
-        return String(data: data, encoding: .utf8) ?? ""
+        let key = String(data: data, encoding: .utf8) ?? ""
+        // Migrate keychain key to file so we never hit keychain again
+        if !key.isEmpty { saveToFile(key) }
+        return key
     }
 }

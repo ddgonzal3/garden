@@ -27,6 +27,7 @@ struct CategoryDetailView: View {
             }
         }
         .listStyle(.plain)
+        .onAppear { ScrollViewHelper.configureAllScrollViews() }
         .overlay {
             if items.isEmpty {
                 ContentUnavailableView(
