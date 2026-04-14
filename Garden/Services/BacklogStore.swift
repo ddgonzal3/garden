@@ -33,7 +33,6 @@ class BacklogStore: ObservableObject {
         do {
             let data = try Data(contentsOf: fileURL)
             let decoder = JSONDecoder()
-            decoder.dateDecodingStrategy = .iso8601
             backlog = try decoder.decode(Backlog.self, from: data)
         } catch {
             print("Garden: Failed to load backlog: \(error)")
@@ -44,7 +43,6 @@ class BacklogStore: ObservableObject {
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            encoder.dateEncodingStrategy = .iso8601
             let data = try encoder.encode(backlog)
             lastWriteByUs = Date()
             try data.write(to: fileURL, options: .atomic)

@@ -27,7 +27,6 @@ struct CategoryDetailView: View {
             }
         }
         .listStyle(.plain)
-        .navigationTitle(title)
         .overlay {
             if items.isEmpty {
                 ContentUnavailableView(

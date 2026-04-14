@@ -15,7 +15,7 @@ struct AllItemsView: View {
             }
             .padding()
         }
-        .navigationTitle("Garden")
+        .navigationBarBackButtonHidden()
     }
 }
 

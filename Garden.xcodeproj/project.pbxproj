@@ -7,11 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		105F72F4B3EAB9320813CF63 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 778F84809790C502F6F828D7 /* KeychainService.swift */; };
+		17C51D9E62AD9FDDD2C3C101 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 53AAA201429ADFA122A77BE6 /* SettingsView.swift */; };
 		30244A95D44A34FD70EF09C6 /* BacklogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC30797F24C88F63610ABCBC /* BacklogStore.swift */; };
 		48E6D5F1F0560E9EA5E59976 /* Backlog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F89A21EBB852501EBE385C17 /* Backlog.swift */; };
+		4903A02E80D42F12A5FD95E1 /* ChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */; };
 		4FD1BD9EF30B64C44C17D09F /* SidebarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 033A4080AE9512295A5FEF33 /* SidebarView.swift */; };
 		56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDBDA24A5A9254B6D172F1C /* ContentView.swift */; };
-		5FFEC102E62676958E9721CC /* EditItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9050E36455922C0A470A42C0 /* EditItemSheet.swift */; };
+		680B9A0BD89FE5DD6FCC3D2F /* AgentChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70AEC4564AA9412061E81145 /* AgentChatView.swift */; };
 		88B405E2129542EC28ED5CD9 /* GardenItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */; };
 		89AE60F27C1CAD0FC99F7C58 /* CategoryDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6DCEA52CA304E0117943BD /* CategoryDetailView.swift */; };
 		9DF91EF743D954139F51E045 /* AddItemSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32B13480465DB52DF36594F6 /* AddItemSheet.swift */; };
@@ -19,6 +22,7 @@
 		B7BCD7D673A7C6ED1D34EA55 /* AllItemsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD5888356A710FD504A62143 /* AllItemsView.swift */; };
 		BEFCBE37EDE89B00C5210FE0 /* GardenApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BCBE0D40AD4912CCD509C3D /* GardenApp.swift */; };
 		D6A5BCCBBD4482B57CB51B2E /* ItemRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A7237629BDEC9C10C538B31 /* ItemRow.swift */; };
+		DA9AC228ADDEF2BADF30A89A /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */; };
 		FFFF69F6E60BB0249C0FD2BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D8D69B362186AB5F8A665668 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -27,10 +31,14 @@
 		033A4080AE9512295A5FEF33 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		1A7237629BDEC9C10C538B31 /* ItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRow.swift; sourceTree = "<group>"; };
 		32B13480465DB52DF36594F6 /* AddItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemSheet.swift; sourceTree = "<group>"; };
+		4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessage.swift; sourceTree = "<group>"; };
+		53AAA201429ADFA122A77BE6 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		70AEC4564AA9412061E81145 /* AgentChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentChatView.swift; sourceTree = "<group>"; };
 		7387C395EB403CCDB8D73AA9 /* Garden.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Garden.entitlements; sourceTree = "<group>"; };
+		778F84809790C502F6F828D7 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		8BCBE0D40AD4912CCD509C3D /* GardenApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenApp.swift; sourceTree = "<group>"; };
-		9050E36455922C0A470A42C0 /* EditItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditItemSheet.swift; sourceTree = "<group>"; };
 		9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddCategorySheet.swift; sourceTree = "<group>"; };
+		A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgentService.swift; sourceTree = "<group>"; };
 		BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GardenItem.swift; sourceTree = "<group>"; };
 		D8D69B362186AB5F8A665668 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		DC30797F24C88F63610ABCBC /* BacklogStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BacklogStore.swift; sourceTree = "<group>"; };
@@ -52,7 +60,9 @@
 		2CCAB86519E448138CDE8EE1 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */,
 				DC30797F24C88F63610ABCBC /* BacklogStore.swift */,
+				778F84809790C502F6F828D7 /* KeychainService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -75,11 +85,12 @@
 			children = (
 				9CC7E3CF269E70F46A54CB9E /* AddCategorySheet.swift */,
 				32B13480465DB52DF36594F6 /* AddItemSheet.swift */,
+				70AEC4564AA9412061E81145 /* AgentChatView.swift */,
 				FD5888356A710FD504A62143 /* AllItemsView.swift */,
 				FA6DCEA52CA304E0117943BD /* CategoryDetailView.swift */,
 				ECDBDA24A5A9254B6D172F1C /* ContentView.swift */,
-				9050E36455922C0A470A42C0 /* EditItemSheet.swift */,
 				1A7237629BDEC9C10C538B31 /* ItemRow.swift */,
+				53AAA201429ADFA122A77BE6 /* SettingsView.swift */,
 				033A4080AE9512295A5FEF33 /* SidebarView.swift */,
 			);
 			path = Views;
@@ -89,6 +100,7 @@
 			isa = PBXGroup;
 			children = (
 				F89A21EBB852501EBE385C17 /* Backlog.swift */,
+				4002B3873E2D9DE0E0A232B4 /* ChatMessage.swift */,
 				BC6F96B1A2856D1B1E5D1E0D /* GardenItem.swift */,
 			);
 			path = Models;
@@ -174,15 +186,19 @@
 			files = (
 				ABDE7E60B98169B5C205BD9B /* AddCategorySheet.swift in Sources */,
 				9DF91EF743D954139F51E045 /* AddItemSheet.swift in Sources */,
+				680B9A0BD89FE5DD6FCC3D2F /* AgentChatView.swift in Sources */,
+				DA9AC228ADDEF2BADF30A89A /* AgentService.swift in Sources */,
 				B7BCD7D673A7C6ED1D34EA55 /* AllItemsView.swift in Sources */,
 				48E6D5F1F0560E9EA5E59976 /* Backlog.swift in Sources */,
 				30244A95D44A34FD70EF09C6 /* BacklogStore.swift in Sources */,
 				89AE60F27C1CAD0FC99F7C58 /* CategoryDetailView.swift in Sources */,
+				4903A02E80D42F12A5FD95E1 /* ChatMessage.swift in Sources */,
 				56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */,
-				5FFEC102E62676958E9721CC /* EditItemSheet.swift in Sources */,
 				BEFCBE37EDE89B00C5210FE0 /* GardenApp.swift in Sources */,
 				88B405E2129542EC28ED5CD9 /* GardenItem.swift in Sources */,
 				D6A5BCCBBD4482B57CB51B2E /* ItemRow.swift in Sources */,
+				105F72F4B3EAB9320813CF63 /* KeychainService.swift in Sources */,
+				17C51D9E62AD9FDDD2C3C101 /* SettingsView.swift in Sources */,
 				4FD1BD9EF30B64C44C17D09F /* SidebarView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
