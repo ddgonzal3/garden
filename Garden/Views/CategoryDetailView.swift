@@ -3,6 +3,7 @@ import SwiftUI
 struct CategoryDetailView: View {
     let category: String
     @EnvironmentObject var store: BacklogStore
+    @State private var dropTargetId: UUID?
 
     var items: [GardenItem] {
         if category == "__completed__" {
@@ -19,11 +20,26 @@ struct CategoryDetailView: View {
         List {
             ForEach(items) { item in
                 ItemRow(item: item)
-            }
-            .onMove { source, destination in
-                if category != "__completed__" {
-                    store.moveItem(from: source, to: destination, in: category)
-                }
+                    .overlay(alignment: .top) {
+                        if dropTargetId == item.id {
+                            RoundedRectangle(cornerRadius: 1)
+                                .fill(Color.accentColor.opacity(0.6))
+                                .frame(height: 2)
+                                .padding(.horizontal, 4)
+                                .transition(.opacity)
+                        }
+                    }
+                    .draggable(item)
+                    .dropDestination(for: GardenItem.self) { droppedItems, _ in
+                        guard let dropped = droppedItems.first, dropped.id != item.id else { return false }
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            store.moveItemBeforeTarget(dropped.id, targetId: item.id)
+                        }
+                        dropTargetId = nil
+                        return true
+                    } isTargeted: { targeted in
+                        dropTargetId = targeted ? item.id : nil
+                    }
             }
         }
         .listStyle(.plain)

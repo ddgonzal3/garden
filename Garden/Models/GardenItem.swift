@@ -1,6 +1,15 @@
 import Foundation
+import UniformTypeIdentifiers
+import CoreTransferable
 
-struct GardenItem: Identifiable, Equatable {
+extension UTType {
+    static let gardenItem = UTType(exportedAs: "com.danny.garden.item")
+}
+
+struct GardenItem: Identifiable, Equatable, Transferable {
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .gardenItem)
+    }
     var id: UUID
     var title: String
     var notes: String

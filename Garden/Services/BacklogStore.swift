@@ -209,6 +209,44 @@ class BacklogStore: ObservableObject {
         save()
     }
 
+    func moveItemBeforeTarget(_ draggedId: UUID, targetId: UUID) {
+        guard let idx = projectIndex() else { return }
+        guard draggedId != targetId else { return }
+        guard let dragIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == draggedId }) else { return }
+        guard let targetIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == targetId }) else { return }
+
+        let targetCategory = backlog.projects[idx].items[targetIdx].category
+        let oldCategory = backlog.projects[idx].items[dragIdx].category
+
+        // Remove from current position
+        var item = backlog.projects[idx].items.remove(at: dragIdx)
+        item.category = targetCategory
+
+        // Re-find target after removal (index may have shifted)
+        guard let newTargetIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == targetId }) else {
+            backlog.projects[idx].items.append(item)
+            recalculatePriorities(in: targetCategory, projectIdx: idx)
+            save()
+            return
+        }
+
+        backlog.projects[idx].items.insert(item, at: newTargetIdx)
+        recalculatePriorities(in: targetCategory, projectIdx: idx)
+        if oldCategory != targetCategory {
+            recalculatePriorities(in: oldCategory, projectIdx: idx)
+        }
+        save()
+    }
+
+    private func recalculatePriorities(in category: String, projectIdx idx: Int) {
+        let categoryItemIds = backlog.projects[idx].items.enumerated()
+            .filter { $0.element.category == category && !$0.element.isCompleted }
+            .map { $0.offset }
+        for (priority, itemIdx) in categoryItemIds.enumerated() {
+            backlog.projects[idx].items[itemIdx].priority = priority
+        }
+    }
+
     // MARK: - Category mutations
 
     func addCategory(_ name: String, inProject projectId: UUID? = nil) {

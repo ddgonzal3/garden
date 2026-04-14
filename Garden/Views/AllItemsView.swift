@@ -3,6 +3,7 @@ import AppKit
 
 struct AllItemsView: View {
     @EnvironmentObject var store: BacklogStore
+    @State private var dropTargetId: UUID?
 
     var body: some View {
         let _ = debugLog("[AllItemsView] body — categories: \(store.backlog.categories.count), activeItems: \(store.backlog.activeItems.count)")
@@ -13,6 +14,26 @@ struct AllItemsView: View {
                     Section {
                         ForEach(items) { item in
                             ItemRow(item: item)
+                                .overlay(alignment: .top) {
+                                    if dropTargetId == item.id {
+                                        RoundedRectangle(cornerRadius: 1)
+                                            .fill(Color.accentColor.opacity(0.6))
+                                            .frame(height: 2)
+                                            .padding(.horizontal, 4)
+                                            .transition(.opacity)
+                                    }
+                                }
+                                .draggable(item)
+                                .dropDestination(for: GardenItem.self) { droppedItems, _ in
+                                    guard let dropped = droppedItems.first, dropped.id != item.id else { return false }
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        store.moveItemBeforeTarget(dropped.id, targetId: item.id)
+                                    }
+                                    dropTargetId = nil
+                                    return true
+                                } isTargeted: { targeted in
+                                    dropTargetId = targeted ? item.id : nil
+                                }
                         }
                     } header: {
                         HStack {
