@@ -41,10 +41,9 @@ class AgentService: ObservableObject {
     // MARK: - Agent loop
 
     private func runAgentLoop(userText: String) async throws -> String {
-        // Build conversation from message history
         var apiMessages = buildAPIMessages(newUserText: userText)
 
-        for _ in 0..<10 { // max iterations to prevent runaway
+        for _ in 0..<10 {
             let response = try await callClaude(messages: apiMessages)
 
             guard let stopReason = response["stop_reason"] as? String,
@@ -57,22 +56,18 @@ class AgentService: ObservableObject {
             }
 
             if stopReason == "tool_use" {
-                // Append assistant response to conversation
                 apiMessages.append(["role": "assistant", "content": contentBlocks])
 
-                // Execute tools and collect results
                 var toolResults: [[String: Any]] = []
                 for block in contentBlocks where (block["type"] as? String) == "tool_use" {
                     let result = executeTool(block)
                     toolResults.append(result)
                 }
 
-                // Append tool results as user message
                 apiMessages.append(["role": "user", "content": toolResults])
                 continue
             }
 
-            // Unknown stop reason — return whatever text we have
             return extractText(from: contentBlocks)
         }
 
@@ -141,6 +136,16 @@ class AgentService: ObservableObject {
             result = reorderItems(input)
         case "reorder_categories":
             result = reorderCategories(input)
+        case "add_project":
+            result = addProject(input)
+        case "delete_project":
+            result = deleteProject(input)
+        case "rename_project":
+            result = renameProject(input)
+        case "switch_project":
+            result = switchProject(input)
+        case "reorder_projects":
+            result = reorderProjects(input)
         default:
             result = "Unknown tool: \(name)"
         }
@@ -152,16 +157,35 @@ class AgentService: ObservableObject {
         ]
     }
 
-    // MARK: - Tool implementations
+    // MARK: - Project resolution
+
+    /// Returns (projectId, errorMessage). projectId is nil for active project.
+    private func resolveProjectId(_ name: String?) -> (UUID?, String?) {
+        guard let name = name else { return (nil, nil) }
+        guard let project = backlogStore.backlog.projects.first(where: { $0.name == name }) else {
+            return (nil, "Error: project '\(name)' not found")
+        }
+        return (project.id, nil)
+    }
+
+    // MARK: - Tool implementations (items)
 
     private func readBacklog() -> String {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         guard let data = try? encoder.encode(backlogStore.backlog) else { return "Failed to encode backlog" }
-        return String(data: data, encoding: .utf8) ?? "Failed to encode backlog"
+
+        var result = String(data: data, encoding: .utf8) ?? "Failed to encode backlog"
+        if let activeName = backlogStore.backlog.activeProject?.name {
+            result = "Active project: \(activeName)\n\n\(result)"
+        }
+        return result
     }
 
     private func addItem(_ input: [String: Any]) -> String {
+        let (projectId, error) = resolveProjectId(input["project"] as? String)
+        if let error { return error }
+
         let title = input["title"] as? String ?? ""
         let notes = input["notes"] as? String ?? ""
         let category = input["category"] as? String ?? "Uncategorized"
@@ -169,7 +193,7 @@ class AgentService: ObservableObject {
         guard !title.isEmpty else { return "Error: title is required" }
 
         let item = GardenItem(title: title, notes: notes, category: category)
-        backlogStore.addItem(item)
+        backlogStore.addItem(item, inProject: projectId)
         return "Added '\(title)' to \(category)"
     }
 
@@ -177,7 +201,19 @@ class AgentService: ObservableObject {
         guard let idStr = input["id"] as? String, let id = UUID(uuidString: idStr) else {
             return "Error: valid id is required"
         }
-        guard var item = backlogStore.backlog.activeItems.first(where: { $0.id == id }) else {
+
+        // Find the item across all projects
+        var foundItem: GardenItem?
+        var sourceProjectId: UUID?
+        for project in backlogStore.backlog.projects {
+            if let item = project.items.first(where: { $0.id == id }) {
+                foundItem = item
+                sourceProjectId = project.id
+                break
+            }
+        }
+
+        guard var item = foundItem else {
             return "Error: item not found"
         }
 
@@ -185,7 +221,20 @@ class AgentService: ObservableObject {
         if let notes = input["notes"] as? String { item.notes = notes }
         if let category = input["category"] as? String { item.category = category }
 
-        backlogStore.updateItem(item)
+        // If project param is specified, move the item to that project
+        if let targetName = input["project"] as? String {
+            guard let targetProject = backlogStore.backlog.projects.first(where: { $0.name == targetName }) else {
+                return "Error: project '\(targetName)' not found"
+            }
+            // Apply field updates first, then move if different project
+            backlogStore.updateItem(item)
+            if let sourceId = sourceProjectId, targetProject.id != sourceId {
+                backlogStore.moveItemToProject(id, targetProjectId: targetProject.id)
+            }
+        } else {
+            backlogStore.updateItem(item)
+        }
+
         return "Updated '\(item.title)'"
     }
 
@@ -205,11 +254,16 @@ class AgentService: ObservableObject {
         return "Deleted item"
     }
 
+    // MARK: - Tool implementations (categories)
+
     private func addCategory(_ input: [String: Any]) -> String {
+        let (projectId, error) = resolveProjectId(input["project"] as? String)
+        if let error { return error }
+
         guard let name = input["name"] as? String, !name.isEmpty else {
             return "Error: name is required"
         }
-        backlogStore.addCategory(name)
+        backlogStore.addCategory(name, inProject: projectId)
         return "Added category '\(name)'"
     }
 
@@ -219,8 +273,11 @@ class AgentService: ObservableObject {
             return "Error: category and item_ids are required"
         }
 
+        let (projectId, error) = resolveProjectId(input["project"] as? String)
+        if let error { return error }
+
         let uuids = orderedIds.compactMap { UUID(uuidString: $0) }
-        backlogStore.reorderItems(in: category, orderedIds: uuids)
+        backlogStore.reorderItems(in: category, orderedIds: uuids, inProject: projectId)
         return "Reordered \(uuids.count) items in \(category)"
     }
 
@@ -228,14 +285,85 @@ class AgentService: ObservableObject {
         guard let orderedNames = input["category_names"] as? [String] else {
             return "Error: category_names is required"
         }
-        backlogStore.reorderCategories(orderedNames)
+
+        let (projectId, error) = resolveProjectId(input["project"] as? String)
+        if let error { return error }
+
+        backlogStore.reorderCategories(orderedNames, inProject: projectId)
         return "Reordered categories to: \(orderedNames.joined(separator: ", "))"
+    }
+
+    // MARK: - Tool implementations (projects)
+
+    private func addProject(_ input: [String: Any]) -> String {
+        guard let name = input["name"] as? String, !name.isEmpty else {
+            return "Error: name is required"
+        }
+        if backlogStore.backlog.projects.contains(where: { $0.name == name }) {
+            return "Error: project '\(name)' already exists"
+        }
+        backlogStore.addProject(name)
+        return "Added project '\(name)'"
+    }
+
+    private func deleteProject(_ input: [String: Any]) -> String {
+        guard let name = input["name"] as? String, !name.isEmpty else {
+            return "Error: name is required"
+        }
+        guard let project = backlogStore.backlog.projects.first(where: { $0.name == name }) else {
+            return "Error: project '\(name)' not found"
+        }
+        if backlogStore.backlog.projects.count <= 1 {
+            return "Error: cannot delete the only project"
+        }
+        let itemCount = project.items.count
+        backlogStore.deleteProject(project.id)
+        return "Deleted project '\(name)' (\(itemCount) items removed)"
+    }
+
+    private func renameProject(_ input: [String: Any]) -> String {
+        guard let oldName = input["old_name"] as? String, !oldName.isEmpty else {
+            return "Error: old_name is required"
+        }
+        guard let newName = input["new_name"] as? String, !newName.isEmpty else {
+            return "Error: new_name is required"
+        }
+        guard let project = backlogStore.backlog.projects.first(where: { $0.name == oldName }) else {
+            return "Error: project '\(oldName)' not found"
+        }
+        if backlogStore.backlog.projects.contains(where: { $0.name == newName }) {
+            return "Error: project '\(newName)' already exists"
+        }
+        backlogStore.renameProject(project.id, to: newName)
+        return "Renamed project '\(oldName)' to '\(newName)'"
+    }
+
+    private func switchProject(_ input: [String: Any]) -> String {
+        guard let name = input["name"] as? String, !name.isEmpty else {
+            return "Error: name is required"
+        }
+        guard let project = backlogStore.backlog.projects.first(where: { $0.name == name }) else {
+            return "Error: project '\(name)' not found"
+        }
+        backlogStore.switchProject(project.id)
+        return "Switched to project '\(name)'"
+    }
+
+    private func reorderProjects(_ input: [String: Any]) -> String {
+        guard let orderedNames = input["project_names"] as? [String] else {
+            return "Error: project_names is required"
+        }
+
+        let orderedIds = orderedNames.compactMap { name in
+            backlogStore.backlog.projects.first(where: { $0.name == name })?.id
+        }
+        backlogStore.reorderProjects(orderedIds)
+        return "Reordered projects to: \(orderedNames.joined(separator: ", "))"
     }
 
     // MARK: - Helpers
 
     private func buildAPIMessages(newUserText: String) -> [[String: Any]] {
-        // Include recent conversation history for context (last 20 messages)
         var apiMessages: [[String: Any]] = []
         let recent = messages.suffix(20)
 
@@ -246,8 +374,6 @@ class AgentService: ObservableObject {
             ])
         }
 
-        // The new user message is already appended to self.messages,
-        // so it's included in the loop above
         return apiMessages
     }
 
@@ -264,17 +390,20 @@ class AgentService: ObservableObject {
         """
         You are Garden, a personal task management assistant embedded in a native Mac app.
 
-        You help organize, prioritize, and manage a backlog of tasks. You have tools to read \
-        the backlog, add items, update items, complete items, delete items, add categories, \
-        reorder item priorities, and reorder categories.
+        You help organize, prioritize, and manage a backlog of tasks across multiple projects. \
+        Each project contains its own categories and items. You have tools to manage projects, \
+        read the backlog, add items, update items, complete items, delete items, add categories, \
+        reorder item priorities, reorder categories, and reorder projects.
 
         Guidelines:
         - Be concise and direct
-        - When asked to add items, use the add_item tool
+        - When asked to add items, use the add_item tool — it defaults to the active project
         - When asked about the backlog, use read_backlog first to see current state
         - When reorganizing, read the backlog first, then use reorder_items with the new order
         - Categories are flexible — create new ones when it makes sense
         - Item IDs are UUIDs — always use read_backlog to get the actual IDs before modifying items
+        - Most operations default to the active project — specify a project name only when targeting a different one
+        - Use switch_project when the user wants to work in a different project
         """
     }
 
@@ -284,7 +413,7 @@ class AgentService: ObservableObject {
         [
             [
                 "name": "read_backlog",
-                "description": "Read the full backlog including all items, categories, and priorities. Always call this first before making changes.",
+                "description": "Read the full backlog including all projects, their items, categories, and priorities. Always call this first before making changes.",
                 "input_schema": [
                     "type": "object",
                     "properties": [:] as [String: Any],
@@ -299,13 +428,14 @@ class AgentService: ObservableObject {
                         "title": ["type": "string", "description": "The task title"],
                         "notes": ["type": "string", "description": "Optional notes or details"],
                         "category": ["type": "string", "description": "Category name. Creates the category if it doesn't exist."],
+                        "project": ["type": "string", "description": "Project name. Defaults to the active project."],
                     ] as [String: Any],
                     "required": ["title"],
                 ],
             ],
             [
                 "name": "update_item",
-                "description": "Update an existing item's title, notes, or category",
+                "description": "Update an existing item's title, notes, category, or move it to a different project",
                 "input_schema": [
                     "type": "object",
                     "properties": [
@@ -313,6 +443,7 @@ class AgentService: ObservableObject {
                         "title": ["type": "string", "description": "New title"],
                         "notes": ["type": "string", "description": "New notes"],
                         "category": ["type": "string", "description": "New category"],
+                        "project": ["type": "string", "description": "Move item to this project"],
                     ] as [String: Any],
                     "required": ["id"],
                 ],
@@ -341,11 +472,12 @@ class AgentService: ObservableObject {
             ],
             [
                 "name": "add_category",
-                "description": "Add a new category to the backlog",
+                "description": "Add a new category to a project",
                 "input_schema": [
                     "type": "object",
                     "properties": [
                         "name": ["type": "string", "description": "Category name"],
+                        "project": ["type": "string", "description": "Project name. Defaults to the active project."],
                     ] as [String: Any],
                     "required": ["name"],
                 ],
@@ -358,6 +490,7 @@ class AgentService: ObservableObject {
                     "properties": [
                         "category": ["type": "string", "description": "The category to reorder"],
                         "item_ids": ["type": "array", "items": ["type": "string"], "description": "Item UUIDs in the desired priority order (first = highest priority)"],
+                        "project": ["type": "string", "description": "Project name. Defaults to the active project."],
                     ] as [String: Any],
                     "required": ["category", "item_ids"],
                 ],
@@ -369,8 +502,65 @@ class AgentService: ObservableObject {
                     "type": "object",
                     "properties": [
                         "category_names": ["type": "array", "items": ["type": "string"], "description": "Category names in the desired display order"],
+                        "project": ["type": "string", "description": "Project name. Defaults to the active project."],
                     ] as [String: Any],
                     "required": ["category_names"],
+                ],
+            ],
+            [
+                "name": "add_project",
+                "description": "Create a new project",
+                "input_schema": [
+                    "type": "object",
+                    "properties": [
+                        "name": ["type": "string", "description": "Project name"],
+                    ] as [String: Any],
+                    "required": ["name"],
+                ],
+            ],
+            [
+                "name": "delete_project",
+                "description": "Delete a project and all its items. Cannot delete the last remaining project.",
+                "input_schema": [
+                    "type": "object",
+                    "properties": [
+                        "name": ["type": "string", "description": "Project name to delete"],
+                    ] as [String: Any],
+                    "required": ["name"],
+                ],
+            ],
+            [
+                "name": "rename_project",
+                "description": "Rename a project",
+                "input_schema": [
+                    "type": "object",
+                    "properties": [
+                        "old_name": ["type": "string", "description": "Current project name"],
+                        "new_name": ["type": "string", "description": "New project name"],
+                    ] as [String: Any],
+                    "required": ["old_name", "new_name"],
+                ],
+            ],
+            [
+                "name": "switch_project",
+                "description": "Switch the active project (updates the UI)",
+                "input_schema": [
+                    "type": "object",
+                    "properties": [
+                        "name": ["type": "string", "description": "Project name to switch to"],
+                    ] as [String: Any],
+                    "required": ["name"],
+                ],
+            ],
+            [
+                "name": "reorder_projects",
+                "description": "Reorder projects in the project switcher",
+                "input_schema": [
+                    "type": "object",
+                    "properties": [
+                        "project_names": ["type": "array", "items": ["type": "string"], "description": "Project names in the desired display order"],
+                    ] as [String: Any],
+                    "required": ["project_names"],
                 ],
             ],
         ]
