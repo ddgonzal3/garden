@@ -81,8 +81,23 @@ struct ItemRow: View {
         .contextMenu {
             if !item.isCompleted {
                 Button("Complete") { store.completeItem(item.id) }
+                Menu("Move to") {
+                    ForEach(store.backlog.categories.filter { $0 != item.category }, id: \.self) { cat in
+                        Button(cat) {
+                            store.moveItemToCategory(item.id, newCategory: cat)
+                        }
+                    }
+                }
             }
             Button("Delete", role: .destructive) { store.deleteItem(item.id) }
+        }
+        .onAppear {
+            if store.editingItemId == item.id {
+                store.editingItemId = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    startEditingTitle()
+                }
+            }
         }
     }
 
@@ -95,7 +110,11 @@ struct ItemRow: View {
     private func commitTitle() {
         isEditingTitle = false
         let trimmed = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed != item.title else { return }
+        if trimmed.isEmpty {
+            if item.title.isEmpty { store.deleteItem(item.id) }
+            return
+        }
+        guard trimmed != item.title else { return }
         var updated = item
         updated.title = trimmed
         store.updateItem(updated)
