@@ -15,7 +15,3 @@ You plant things, tend to them, some grow into priorities, some you prune. Tasks
 ```bash
 xcodebuild -project Garden.xcodeproj -scheme Garden -configuration Debug build
 ```
-
-## Philosophy
-
-Totally custom. Totally mine. Built for me.
