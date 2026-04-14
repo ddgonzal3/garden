@@ -74,6 +74,8 @@ enum ScrollViewHelper {
         if let scrollView = view as? NSScrollView {
             scrollView.scrollerStyle = .overlay
             scrollView.scrollerKnobStyle = .light
+            scrollView.hasVerticalScroller = false
+            scrollView.hasHorizontalScroller = false
         }
         for subview in view.subviews {
             applyOverlayStyle(to: subview)
