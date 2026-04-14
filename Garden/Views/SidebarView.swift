@@ -1,8 +1,14 @@
 import SwiftUI
 
+enum SidebarSelection: Hashable {
+    case all
+    case category(String)
+    case completed
+}
+
 struct SidebarView: View {
     @EnvironmentObject var store: BacklogStore
-    @Binding var selectedCategory: String?
+    @Binding var selectedCategory: SidebarSelection?
     @Binding var showingAddCategory: Bool
     @Binding var showingAddProject: Bool
 
@@ -34,37 +40,52 @@ struct SidebarView: View {
             }
 
             Section {
-                NavigationLink(value: nil as String?) {
-                    Label {
-                        HStack {
-                            Text("All")
-                            Spacer()
-                            Text("\(store.backlog.activeItems.count)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "leaf")
+                Label {
+                    HStack {
+                        Text("All")
+                        Spacer()
+                        Text("\(store.backlog.activeItems.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                } icon: {
+                    Image(systemName: "leaf")
                 }
+                .tag(SidebarSelection.all)
+                .accessibilityIdentifier("sidebar-all")
             }
 
             Section("Categories") {
                 ForEach(store.backlog.categories, id: \.self) { category in
-                    NavigationLink(value: category) {
-                        Label {
-                            HStack {
-                                Text(category)
-                                Spacer()
-                                Text("\(store.backlog.items(in: category).count)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                    Label {
+                        HStack {
+                            Text(category)
+                            Spacer()
+                            Button(action: {
+                                let item = GardenItem(title: "", category: category)
+                                store.addItemToTop(item)
+                                selectedCategory = .category(category)
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.caption2)
                             }
-                        } icon: {
-                            Image(systemName: "folder")
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.tertiary)
+                            Text("\(store.backlog.items(in: category).count)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
+                    } icon: {
+                        Image(systemName: "folder")
                     }
+                    .tag(SidebarSelection.category(category))
+                    .accessibilityIdentifier("sidebar-\(category)")
                     .contextMenu {
+                        Button("Add Item") {
+                            let item = GardenItem(title: "", category: category)
+                            store.addItemToTop(item)
+                            selectedCategory = .category(category)
+                        }
                         if category != "Uncategorized" {
                             Button("Delete Category", role: .destructive) {
                                 store.deleteCategory(category)
@@ -75,19 +96,18 @@ struct SidebarView: View {
             }
 
             Section {
-                NavigationLink(value: "__completed__") {
-                    Label {
-                        HStack {
-                            Text("Completed")
-                            Spacer()
-                            Text("\(store.backlog.completedItems.count)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: "checkmark.circle")
+                Label {
+                    HStack {
+                        Text("Completed")
+                        Spacer()
+                        Text("\(store.backlog.completedItems.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
+                } icon: {
+                    Image(systemName: "checkmark.circle")
                 }
+                .tag(SidebarSelection.completed)
             }
         }
         .listStyle(.sidebar)
