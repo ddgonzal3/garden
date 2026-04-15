@@ -276,11 +276,12 @@ function App() {
           : selection.category;
 
   if (!loaded || !activeProject) {
-    return <div className="app-shell" />;
+    return <div className="app-shell"><div className="titlebar" data-tauri-drag-region /></div>;
   }
 
   return (
     <div className="app-shell">
+      <div className="titlebar" data-tauri-drag-region />
       <aside className="sidebar">
         <div className="sidebar-project">
           <select
