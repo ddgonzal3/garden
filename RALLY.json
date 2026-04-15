@@ -1,7 +1,8 @@
 {
     "statusBar": [
-        "build.sh",
-        "run.sh"
+        "watch-fe.sh",
+        "run.sh",
+        "release.sh"
     ],
     "statusBarRight": [
         "sync.sh"

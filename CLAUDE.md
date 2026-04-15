@@ -1,6 +1,6 @@
 # Garden
 
-A native macOS SwiftUI task manager with Claude AI integration.
+A macOS Tauri desktop task manager (React + Vite frontend, Rust backend).
 
 ## Design Principles
 
@@ -8,22 +8,41 @@ A native macOS SwiftUI task manager with Claude AI integration.
 
 ## Architecture
 
-- **UI**: SwiftUI, native macOS components, no external UI frameworks
-- **State**: `BacklogStore` (ObservableObject) as single source of truth
-- **Persistence**: JSON file at `~/.garden/backlog.json`, atomic writes, file watching for external sync
-- **AI**: `AgentService` talks to Claude API with tool-use for backlog mutations
+- **UI**: React + Vite, dark theme, L2C "Rich Edge" card styling
+- **State**: React useState in App component, derived via backlog query functions
+- **Persistence**: Per-project JSON files at `~/.garden/projects/<uuid>.json`, state at `~/.garden/state.json`
+- **Desktop**: Tauri v2 with fs plugin for filesystem access scoped to `~/.garden/`
 
 ## Build & Run
 
-After making changes, build and launch the app:
 ```bash
-./scripts/run.sh
+./scripts/watch-fe.sh   # Dev mode: debug build + Vite hot-reload (CSS/TSX changes are instant)
+./scripts/run.sh        # Debug build + launch .app
+./scripts/release.sh    # Release build + launch .app (optimized)
+./scripts/reload.sh     # Smart reload: triggers webview reload if watcher running, else falls back to run.sh
 ```
-This builds, kills any existing instance, and opens the app in the foreground.
+
+**For design iteration**, use `watch-fe.sh` — it runs `cargo tauri dev` so frontend changes reflect instantly without restarting.
+
+**To use the app**, use `run.sh` (debug, faster compile) or `release.sh` (optimized).
+
+**Never run `cargo tauri build` without `--bundles app`** unless you want a DMG.
+
+## After Making Changes
+
+**When `watch-fe.sh` is running**, most CSS/TSX changes hot-reload automatically. If you need a full page refresh, run:
+
+```bash
+./scripts/reload.sh
+```
+
+This detects the Vite dev server and triggers a webview reload via `curl http://localhost:5173/__reload`. If no dev server is running, it falls back to `./scripts/run.sh` (full debug build + relaunch).
+
+**Always run `./scripts/reload.sh` after finishing a set of changes** so the user can see the result immediately.
 
 ## Conventions
 
 - Items are ordered by `priority` (lower = higher in list) within their `priorityBucket` (0 = P1, 1 = P2, etc.)
 - Categories are stored as ordered string arrays on each project
-- All mutations go through BacklogStore methods which call `save()` at the end
-- File watcher debounces to avoid reload loops after app's own writes
+- All mutations go through `mutateActiveProject` which triggers auto-save via useEffect
+- Project files are named by UUID to prevent slug collisions

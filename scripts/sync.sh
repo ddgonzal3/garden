@@ -1,0 +1,35 @@
+#!/bin/bash
+set -e
+cd "$(dirname "$0")/.."
+
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+main=$(git config rally.syncBranch 2>/dev/null || true)
+if [ -z "$main" ]; then
+  main=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
+fi
+if [ -z "$main" ]; then
+  for candidate in main master staging; do
+    if git rev-parse --verify "origin/$candidate" &>/dev/null; then
+      main=$candidate; break
+    fi
+  done
+fi
+if [ -z "$main" ]; then echo "Cannot detect default branch"; exit 1; fi
+if [ -z "$branch" ]; then echo "Not in a git repo"; exit 1; fi
+if [ "$branch" = "$main" ]; then echo "Already on $main"; exit 1; fi
+if [ -n "$(git status --porcelain -uno)" ]; then
+  echo "Working tree is dirty. Commit or stash first."
+  exit 1
+fi
+
+rm -f .git/index.lock
+git fetch origin "$main" || { echo "Fetch failed"; exit 1; }
+
+echo "Resetting $branch to origin/$main..."
+git reset --hard "origin/$main"
+
+if git rev-parse --verify "origin/$branch" &>/dev/null; then
+  git push --force-with-lease || { echo "Push failed"; exit 1; }
+fi
+
+echo "$branch is now identical to $main."
