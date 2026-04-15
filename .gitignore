@@ -17,3 +17,7 @@ Packages/
 .DS_Store
 *.swp
 *~.nib
+
+# Local agent tooling
+.superpowers/
+.agents/

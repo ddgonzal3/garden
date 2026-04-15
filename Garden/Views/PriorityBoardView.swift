@@ -294,18 +294,12 @@ private struct BucketColumnView: View {
             // Header
             HStack {
                 Text("P\(bucket + 1)")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary.opacity(0.94))
 
                 Spacer()
 
-                Text("\(items.count)")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.tertiary)
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 2)
-                    .background(.quaternary.opacity(0.3))
-                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                countPill("\(items.count)")
 
                 if isHovering {
                     Button(action: onCreateItem) {
@@ -411,6 +405,52 @@ private struct BucketColumnView: View {
         }
     }
 
+    @ViewBuilder
+    private func countPill(_ text: String) -> some View {
+        let shape = Capsule(style: .continuous)
+
+        Text(text)
+            .font(.system(size: 12, weight: .bold, design: .rounded))
+            .foregroundStyle(Color(red: 0.78, green: 0.81, blue: 0.85))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background {
+                shape
+                    .fill(Color.white.opacity(0.025))
+                    .overlay {
+                        shape.fill(
+                            LinearGradient(
+                                stops: [
+                                    .init(color: .white.opacity(0.045), location: 0),
+                                    .init(color: .white.opacity(0.018), location: 0.55),
+                                    .init(color: .white.opacity(0.012), location: 1)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                    }
+            }
+            .overlay {
+                shape
+                    .strokeBorder(Color.white.opacity(0.05), lineWidth: 1)
+                    .overlay {
+                        shape.strokeBorder(Color.white.opacity(0.014), lineWidth: 2)
+                    }
+            }
+            .overlay {
+                VStack(spacing: 0) {
+                    Color.white.opacity(0.05)
+                        .frame(height: 1)
+                    Spacer()
+                    Color.black.opacity(0.14)
+                        .frame(height: 1)
+                }
+                .clipShape(shape)
+                .padding(1)
+            }
+    }
+
     // MARK: - Inline Edit Card (new item creation — styled like a real card)
 
     @ViewBuilder
@@ -420,27 +460,20 @@ private struct BucketColumnView: View {
         VStack(alignment: .leading, spacing: 6) {
             TextField("New item...", text: $editingTitle, axis: .vertical)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(1...5)
                 .focused(editFocused)
                 .onSubmit { onCommitEdit() }
 
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(catColor)
-                    .frame(width: 6, height: 6)
-
-                Text(item.category)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
-            }
+            Text(item.category)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(catColor.opacity(0.86))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background { cardBackground(selected: false) }
-        .overlay { cardBorder(selected: false) }
-        .overlay(alignment: .leading) { cardCategoryStrip(color: catColor, selected: false) }
+        .background { cardBackground(accentColor: catColor, selected: false) }
+        .overlay { cardBorder(accentColor: catColor, selected: false) }
     }
 
     // MARK: - Board Card
@@ -453,27 +486,20 @@ private struct BucketColumnView: View {
 
         VStack(alignment: .leading, spacing: 6) {
             Text(item.title)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 13, weight: .semibold))
                 .lineLimit(3)
                 .foregroundStyle(.primary)
                 .onTapGesture { onStartRename(item) }
 
-            HStack(spacing: 5) {
-                Circle()
-                    .fill(catColor)
-                    .frame(width: 6, height: 6)
-
-                Text(item.category)
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.tertiary)
-            }
+            Text(item.category)
+                .font(.system(size: 10.5, weight: .semibold))
+                .foregroundStyle(catColor.opacity(0.88))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background { cardBackground(selected: isSelected) }
-        .overlay { cardBorder(selected: isSelected) }
-        .overlay(alignment: .leading) { cardCategoryStrip(color: catColor, selected: isSelected) }
+        .background { cardBackground(accentColor: catColor, selected: isSelected) }
+        .overlay { cardBorder(accentColor: catColor, selected: isSelected) }
         .overlay(alignment: .top) {
             if isTarget {
                 Capsule()
@@ -523,44 +549,68 @@ private struct BucketColumnView: View {
     // MARK: - Card Chrome (shared between board card & inline edit card)
 
     @ViewBuilder
-    private func cardBackground(selected: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 8)
+    private func cardBackground(accentColor: Color, selected: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+
+        shape
             .fill(Color(.controlBackgroundColor))
-            .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
+            .overlay {
+                shape.fill(
+                    LinearGradient(
+                        stops: [
+                            .init(color: Color.white.opacity(0.03), location: 0),
+                            .init(color: Color.white.opacity(0.012), location: 0.24),
+                            .init(color: Color.white.opacity(0.008), location: 0.58),
+                            .init(color: Color.white.opacity(0.011), location: 1)
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+            }
+            .overlay {
+                shape.fill(
+                    RadialGradient(
+                        colors: [accentColor.opacity(0.022), .clear],
+                        center: .topLeading,
+                        startRadius: 4,
+                        endRadius: 96
+                    )
+                )
+            }
+            .overlay {
+                shape.fill(
+                    RadialGradient(
+                        colors: [accentColor.opacity(0.012), .clear],
+                        center: .bottomTrailing,
+                        startRadius: 10,
+                        endRadius: 118
+                    )
+                )
+            }
+            .shadow(color: .black.opacity(0.24), radius: 1, y: 1)
+            .shadow(color: .black.opacity(0.15), radius: 16, y: 10)
+            .shadow(color: selected ? Color.accentColor.opacity(0.08) : .clear, radius: 6)
     }
 
     @ViewBuilder
-    private func cardBorder(selected: Bool) -> some View {
-        if selected {
-            // Selected: accent gradient border (Flow's accent-border pattern)
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Color.accentColor.opacity(0.6), Color.accentColor.opacity(0.25)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 1
-                )
-        } else {
-            // Normal: gradient stroke — bright top edge fading to dark bottom
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ),
-                    lineWidth: 0.5
-                )
+    private func cardBorder(accentColor: Color, selected: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 10, style: .continuous)
+
+        ZStack {
+            shape.strokeBorder(Color.white.opacity(selected ? 0.05 : 0.034), lineWidth: 1)
+            shape.strokeBorder(Color.white.opacity(selected ? 0.02 : 0.014), lineWidth: 2)
+            shape.strokeBorder(accentColor.opacity(selected ? 0.08 : 0.015), lineWidth: 1)
+
+            VStack(spacing: 0) {
+                Color.white.opacity(selected ? 0.072 : 0.062)
+                    .frame(height: 1)
+                Spacer()
+                Color.black.opacity(0.18)
+                    .frame(height: 1)
+            }
+            .clipShape(shape)
+            .padding(1)
         }
-    }
-
-    @ViewBuilder
-    private func cardCategoryStrip(color: Color, selected: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 8)
-            .fill(color)
-            .frame(width: selected ? 4 : 3)
-            .padding(.vertical, 1)
     }
 }
