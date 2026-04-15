@@ -12,6 +12,10 @@ struct PriorityBoardView: View {
     @State private var editingTitle: String = ""
     @FocusState private var editFocused: Bool
 
+    // Selection
+    @State private var selectedId: UUID?
+    @State private var selectionMonitor: Any?
+
     @State private var clickMonitor: Any?
     @State private var monitorInstallWork: DispatchWorkItem?
 
@@ -23,7 +27,10 @@ struct PriorityBoardView: View {
         }
         .padding(16)
         .animation(.spring(response: 0.35, dampingFraction: 0.8), value: store.backlog.activeItems.map(\.id))
-        .onAppear { ScrollViewHelper.configureAllScrollViews() }
+        .onAppear {
+            ScrollViewHelper.configureAllScrollViews()
+            installSelectionMonitor()
+        }
         .onExitCommand { commitEdit() }
         .onChange(of: store.editingItemId) { _, newId in
             if let newId {
@@ -100,6 +107,10 @@ struct PriorityBoardView: View {
                 NSEvent.removeMonitor(monitor)
                 clickMonitor = nil
             }
+            if let monitor = selectionMonitor {
+                NSEvent.removeMonitor(monitor)
+                selectionMonitor = nil
+            }
         }
         .sheet(item: $detailItemId) { id in
             ItemDetailSheet(itemId: id)
@@ -119,6 +130,7 @@ struct PriorityBoardView: View {
             editingId: $editingId,
             editingTitle: $editingTitle,
             editFocused: $editFocused,
+            selectedId: $selectedId,
             dropTargetId: $dropTargetId,
             dropTargetBucket: $dropTargetBucket,
             detailItemId: $detailItemId,
@@ -163,6 +175,7 @@ struct PriorityBoardView: View {
     }
 
     private func startRename(_ item: GardenItem) {
+        selectedId = nil
         editingId = item.id
         editingTitle = item.title
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -181,6 +194,7 @@ struct PriorityBoardView: View {
     }
 
     private func completeWithAnimation(_ id: UUID) {
+        if selectedId == id { selectedId = nil }
         withAnimation(.easeOut(duration: 0.2)) {
             completingIds.insert(id)
         }
@@ -189,6 +203,61 @@ struct PriorityBoardView: View {
                 completingIds.remove(id)
                 store.completeItem(id)
             }
+        }
+    }
+
+    private func duplicateItem(_ id: UUID) {
+        if let newId = store.duplicateItem(id) {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                selectedId = newId
+            }
+        }
+    }
+
+    private func installSelectionMonitor() {
+        selectionMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Don't intercept when editing or when a text field is active
+            guard self.editingId == nil else { return event }
+            if let responder = NSApp.keyWindow?.firstResponder, responder is NSText {
+                return event
+            }
+
+            // Cmd+Z to undo (works even without selection)
+            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "z"
+                && !event.modifierFlags.contains(.shift) {
+                if self.store.canUndo {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        self.store.undo()
+                    }
+                    return nil
+                }
+                return event
+            }
+
+            guard let id = self.selectedId else { return event }
+
+            // Delete (backspace) or Forward Delete
+            if event.keyCode == 51 || event.keyCode == 117 {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    self.store.deleteItem(id)
+                }
+                self.selectedId = nil
+                return nil
+            }
+
+            // Cmd+D to duplicate
+            if event.modifierFlags.contains(.command) && event.charactersIgnoringModifiers == "d" {
+                self.duplicateItem(id)
+                return nil
+            }
+
+            // Escape to deselect
+            if event.keyCode == 53 {
+                self.selectedId = nil
+                return nil
+            }
+
+            return event
         }
     }
 }
@@ -207,6 +276,7 @@ private struct BucketColumnView: View {
     @Binding var editingId: UUID?
     @Binding var editingTitle: String
     var editFocused: FocusState<Bool>.Binding
+    @Binding var selectedId: UUID?
     @Binding var dropTargetId: UUID?
     @Binding var dropTargetBucket: Int?
     @Binding var detailItemId: UUID?
@@ -314,9 +384,10 @@ private struct BucketColumnView: View {
                         }
                     }
             }
-            // Double-click anywhere in the column's scroll area to create
+            // Double-click empty space to create, single-click to deselect
             .contentShape(Rectangle())
             .onTapGesture(count: 2) { onCreateItem() }
+            .simultaneousGesture(TapGesture().onEnded { selectedId = nil })
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: 200)
@@ -347,9 +418,10 @@ private struct BucketColumnView: View {
         let catColor = CategoryColor.color(for: item.category)
 
         VStack(alignment: .leading, spacing: 6) {
-            TextField("New item...", text: $editingTitle)
+            TextField("New item...", text: $editingTitle, axis: .vertical)
                 .textFieldStyle(.plain)
                 .font(.system(size: 12, weight: .medium))
+                .lineLimit(1...5)
                 .focused(editFocused)
                 .onSubmit { onCommitEdit() }
 
@@ -366,17 +438,9 @@ private struct BucketColumnView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.06), radius: 1, y: 1)
-        }
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(catColor)
-                .frame(width: 3)
-                .padding(.vertical, 1)
-        }
+        .background { cardBackground(selected: false) }
+        .overlay { cardBorder(selected: false) }
+        .overlay(alignment: .leading) { cardCategoryStrip(color: catColor, selected: false) }
     }
 
     // MARK: - Board Card
@@ -385,6 +449,7 @@ private struct BucketColumnView: View {
     private func boardCard(item: GardenItem) -> some View {
         let catColor = CategoryColor.color(for: item.category)
         let isTarget = dropTargetId == item.id
+        let isSelected = selectedId == item.id
 
         VStack(alignment: .leading, spacing: 6) {
             Text(item.title)
@@ -406,17 +471,9 @@ private struct BucketColumnView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(.controlBackgroundColor))
-                .shadow(color: .black.opacity(0.06), radius: 1, y: 1)
-        }
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 8)
-                .fill(catColor)
-                .frame(width: 3)
-                .padding(.vertical, 1)
-        }
+        .background { cardBackground(selected: isSelected) }
+        .overlay { cardBorder(selected: isSelected) }
+        .overlay(alignment: .leading) { cardCategoryStrip(color: catColor, selected: isSelected) }
         .overlay(alignment: .top) {
             if isTarget {
                 Capsule()
@@ -431,6 +488,9 @@ private struct BucketColumnView: View {
         .onTapGesture(count: 2) {
             detailItemId = item.id
         }
+        .simultaneousGesture(TapGesture().onEnded {
+            selectedId = item.id
+        })
         .contextMenu {
             Button("Open") { detailItemId = item.id }
             Divider()
@@ -458,5 +518,49 @@ private struct BucketColumnView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Card Chrome (shared between board card & inline edit card)
+
+    @ViewBuilder
+    private func cardBackground(selected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Color(.controlBackgroundColor))
+            .shadow(color: .black.opacity(0.2), radius: 1, y: 1)
+    }
+
+    @ViewBuilder
+    private func cardBorder(selected: Bool) -> some View {
+        if selected {
+            // Selected: accent gradient border (Flow's accent-border pattern)
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.accentColor.opacity(0.6), Color.accentColor.opacity(0.25)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+        } else {
+            // Normal: gradient stroke — bright top edge fading to dark bottom
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.12), Color.white.opacity(0.04)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 0.5
+                )
+        }
+    }
+
+    @ViewBuilder
+    private func cardCategoryStrip(color: Color, selected: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(color)
+            .frame(width: selected ? 4 : 3)
+            .padding(.vertical, 1)
     }
 }

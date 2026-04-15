@@ -7,6 +7,10 @@ class BacklogStore: ObservableObject {
     @Published var backlog: Backlog = Backlog()
     @Published var editingItemId: UUID?
 
+    // Undo stack for destructive actions
+    private var undoStack: [(item: GardenItem, projectId: UUID)] = []
+    private let maxUndoDepth = 20
+
     private let fileURL: URL
     private var fileWatcher: DispatchSourceFileSystemObject?
     private var fileDescriptor: Int32 = -1
@@ -149,12 +153,50 @@ class BacklogStore: ObservableObject {
 
     func deleteItem(_ id: UUID) {
         for idx in backlog.projects.indices {
-            if backlog.projects[idx].items.contains(where: { $0.id == id }) {
+            if let item = backlog.projects[idx].items.first(where: { $0.id == id }) {
+                // Push to undo stack (skip empty placeholders — not worth undoing)
+                if !item.title.isEmpty {
+                    undoStack.append((item: item, projectId: backlog.projects[idx].id))
+                    if undoStack.count > maxUndoDepth { undoStack.removeFirst() }
+                }
                 backlog.projects[idx].items.removeAll { $0.id == id }
                 save()
                 return
             }
         }
+    }
+
+    var canUndo: Bool { !undoStack.isEmpty }
+
+    func undo() {
+        guard let entry = undoStack.popLast() else { return }
+        if let idx = backlog.projects.firstIndex(where: { $0.id == entry.projectId }) {
+            backlog.projects[idx].items.append(entry.item)
+            save()
+        }
+    }
+
+    func duplicateItem(_ id: UUID) -> UUID? {
+        guard let idx = projectIndex() else { return nil }
+        guard let itemIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == id }) else { return nil }
+        let original = backlog.projects[idx].items[itemIdx]
+        var copy = original
+        copy.id = UUID()
+        copy.createdAt = Date()
+        copy.completedAt = nil
+        copy.priority = original.priority + 1
+        // Shift items below in same bucket to make room
+        for i in backlog.projects[idx].items.indices {
+            if backlog.projects[idx].items[i].priorityBucket == original.priorityBucket
+                && !backlog.projects[idx].items[i].isCompleted
+                && backlog.projects[idx].items[i].priority >= copy.priority
+                && backlog.projects[idx].items[i].id != id {
+                backlog.projects[idx].items[i].priority += 1
+            }
+        }
+        backlog.projects[idx].items.append(copy)
+        save()
+        return copy.id
     }
 
     func moveItem(from source: IndexSet, to destination: Int, in category: String) {

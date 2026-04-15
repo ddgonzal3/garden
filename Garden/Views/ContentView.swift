@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var showingAddCategory = false
     @State private var showingAddProject = false
     @State private var showingChat = false
+    @AppStorage("zoomLevel") private var zoomLevel: Double = 1.0
 
     var body: some View {
         HSplitView {
@@ -18,7 +19,17 @@ struct ContentView: View {
                     showingAddProject: $showingAddProject
                 )
             } detail: {
-                detailContent(for: selectedCategory ?? .priorityBoard)
+                GeometryReader { geo in
+                    detailContent(for: selectedCategory ?? .priorityBoard)
+                        .scaleEffect(zoomLevel, anchor: .topLeading)
+                        .frame(
+                            width: geo.size.width / zoomLevel,
+                            height: geo.size.height / zoomLevel,
+                            alignment: .topLeading
+                        )
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                        .clipped()
+                }
             }
             .navigationTitle(detailTitle)
 
@@ -65,6 +76,19 @@ struct ContentView: View {
         }
         .onChange(of: store.backlog.activeProjectId) {
             selectedCategory = .priorityBoard
+        }
+        .background {
+            // Zoom shortcuts (hidden buttons to register keyboard shortcuts)
+            Group {
+                Button("") { zoomLevel = min(zoomLevel + 0.1, 1.5) }
+                    .keyboardShortcut("=", modifiers: .command)
+                Button("") { zoomLevel = max(zoomLevel - 0.1, 0.7) }
+                    .keyboardShortcut("-", modifiers: .command)
+                Button("") { zoomLevel = 1.0 }
+                    .keyboardShortcut("0", modifiers: .command)
+            }
+            .frame(width: 0, height: 0)
+            .opacity(0)
         }
         .frame(minWidth: 800, minHeight: 500)
     }
