@@ -1,6 +1,4 @@
-import type { Backlog, GardenItem, GardenProject } from "../types";
-
-const STORAGE_KEY = "garden:web:backlog";
+import type { GardenItem, GardenProject } from "../types";
 
 const colorPalette = [
   "#70cfc0",
@@ -37,148 +35,37 @@ export function createProject(name: string): GardenProject {
   };
 }
 
-export function createSeedBacklog(): Backlog {
-  const project = createProject("Garden");
-  const seedItems: Array<Partial<GardenItem> & Pick<GardenItem, "title" | "category" | "priorityBucket" | "priority">> = [
-    {
-      title: "Losing variations when find-like-this on a clip with variations",
-      category: "Variations",
-      priorityBucket: 0,
-      priority: 0,
-    },
-    {
-      title: "Comp sound with variations not reflecting in panel",
-      category: "Variations",
-      priorityBucket: 0,
-      priority: 1,
-    },
-    {
-      title: "Duplicate sections x canvas",
-      category: "DAW",
-      priorityBucket: 0,
-      priority: 2,
-    },
-    {
-      title: "Track headers should keep a fixed width and never resize horizontally",
-      category: "Design",
-      priorityBucket: 0,
-      priority: 3,
-    },
-    {
-      title: "Stretch: Shift for Ableton, Option for Logic",
-      category: "DAW",
-      priorityBucket: 1,
-      priority: 0,
-    },
-    {
-      title: "Warp markers",
-      category: "Clip Editor",
-      priorityBucket: 1,
-      priority: 1,
-    },
-    {
-      title: "Load Serum preset for bassline",
-      category: "Plugins",
-      priorityBucket: 1,
-      priority: 2,
-    },
-    {
-      title: "Scrollable foots when catalog expands such that the text gets cut off",
-      category: "Clip Editor",
-      priorityBucket: 2,
-      priority: 0,
-    },
-  ];
+/** Normalize a raw JSON object into a valid GardenProject, filling missing fields with defaults. */
+export function normalizeProject(raw: Record<string, unknown>): GardenProject {
+  const items = Array.isArray(raw.items)
+    ? (raw.items as Record<string, unknown>[]).map(
+        (item): GardenItem => ({
+          id: (item.id as string) ?? crypto.randomUUID(),
+          title: (item.title as string) ?? "",
+          notes: (item.notes as string) ?? "",
+          category: (item.category as string) ?? "Uncategorized",
+          priority: (item.priority as number) ?? 0,
+          priorityBucket: (item.priorityBucket as number) ?? 0,
+          createdAt: (item.createdAt as string) ?? new Date().toISOString(),
+          completedAt: (item.completedAt as string | null) ?? null,
+        }),
+      )
+    : [];
 
-  project.categories = Array.from(
-    new Set(["Uncategorized", ...seedItems.map((item) => item.category)]),
-  );
-
-  project.items = seedItems.map((item) => ({
-    id: crypto.randomUUID(),
-    title: item.title,
-    notes: "",
-    category: item.category,
-    priority: item.priority,
-    priorityBucket: item.priorityBucket,
-    createdAt: new Date().toISOString(),
-    completedAt: null,
-  }));
+  const categories = Array.isArray(raw.categories) && raw.categories.length > 0
+    ? (raw.categories as string[])
+    : ["Uncategorized"];
 
   return {
-    projects: [project],
-    activeProjectId: project.id,
+    id: (raw.id as string) ?? crypto.randomUUID(),
+    name: (raw.name as string) ?? "Untitled Project",
+    categories,
+    items,
+    priorityBucketCount: (raw.priorityBucketCount as number) ?? 3,
   };
 }
 
-export function normalizeBacklog(raw: unknown): Backlog {
-  const fallback = createSeedBacklog();
-
-  if (!raw || typeof raw !== "object") {
-    return fallback;
-  }
-
-  const maybeBacklog = raw as Partial<Backlog> & {
-    items?: GardenItem[];
-    categories?: string[];
-  };
-
-  if (Array.isArray(maybeBacklog.projects) && maybeBacklog.projects.length > 0) {
-    return {
-      projects: maybeBacklog.projects.map((project) => ({
-        id: project.id ?? crypto.randomUUID(),
-        name: project.name ?? "Untitled Project",
-        categories: project.categories?.length ? project.categories : ["Uncategorized"],
-        priorityBucketCount: project.priorityBucketCount ?? 3,
-        items: Array.isArray(project.items)
-          ? project.items.map((item) => ({
-              id: item.id ?? crypto.randomUUID(),
-              title: item.title ?? "",
-              notes: item.notes ?? "",
-              category: item.category ?? "Uncategorized",
-              priority: item.priority ?? 0,
-              priorityBucket: item.priorityBucket ?? 0,
-              createdAt: item.createdAt ?? new Date().toISOString(),
-              completedAt: item.completedAt ?? null,
-            }))
-          : [],
-      })),
-      activeProjectId:
-        maybeBacklog.activeProjectId ??
-        maybeBacklog.projects[0]?.id ??
-        fallback.activeProjectId,
-    };
-  }
-
-  if (Array.isArray(maybeBacklog.items)) {
-    const project = createProject("Flow");
-    project.categories = maybeBacklog.categories?.length
-      ? maybeBacklog.categories
-      : ["Uncategorized"];
-    project.items = maybeBacklog.items;
-    return {
-      projects: [project],
-      activeProjectId: project.id,
-    };
-  }
-
-  return fallback;
-}
-
-export function loadBacklog(): Backlog {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? normalizeBacklog(JSON.parse(stored)) : createSeedBacklog();
-  } catch {
-    return createSeedBacklog();
-  }
-}
-
-export function saveBacklog(backlog: Backlog): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(backlog));
-}
-
-export function getActiveProject(backlog: Backlog): GardenProject {
+export function getActiveProject(backlog: { projects: GardenProject[]; activeProjectId: string | null }): GardenProject {
   return (
     backlog.projects.find((project) => project.id === backlog.activeProjectId) ??
     backlog.projects[0]

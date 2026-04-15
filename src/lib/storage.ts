@@ -2,8 +2,8 @@
  * File-based persistence via Tauri's fs plugin.
  *
  * Layout:
- *   ~/.garden/state.json           — { activeProjectId }
- *   ~/.garden/projects/<slug>.json — one file per project
+ *   ~/.garden/state.json              — { activeProjectId }
+ *   ~/.garden/projects/<id>.json      — one file per project (keyed by UUID)
  *
  * On first load, migrates the legacy backlog.json into the new structure.
  */
@@ -18,6 +18,7 @@ import {
   rename,
 } from "@tauri-apps/plugin-fs";
 import { homeDir, join } from "@tauri-apps/api/path";
+import { normalizeProject } from "./backlog";
 import type { Backlog, GardenProject } from "../types";
 
 let gardenDir: string | null = null;
@@ -27,13 +28,6 @@ async function getGardenDir(): Promise<string> {
   const home = await homeDir();
   gardenDir = await join(home, ".garden");
   return gardenDir;
-}
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 // ── State (active project tracking) ──────────────────────────────
@@ -47,7 +41,11 @@ async function readState(): Promise<AppState | null> {
   const path = `${dir}/state.json`;
   if (!(await exists(path))) return null;
   try {
-    return JSON.parse(await readTextFile(path));
+    const parsed = JSON.parse(await readTextFile(path));
+    if (parsed && typeof parsed.activeProjectId === "string") {
+      return parsed;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -70,7 +68,7 @@ async function ensureProjectsDir(): Promise<string> {
 }
 
 function projectFileName(project: GardenProject): string {
-  return `${slugify(project.name)}.json`;
+  return `${project.id}.json`;
 }
 
 async function writeProject(project: GardenProject): Promise<void> {
@@ -89,10 +87,10 @@ async function readAllProjects(): Promise<GardenProject[]> {
   for (const entry of entries) {
     if (!entry.name?.endsWith(".json")) continue;
     try {
-      const raw = await readTextFile(`${dir}/${entry.name}`);
-      projects.push(JSON.parse(raw));
+      const raw = JSON.parse(await readTextFile(`${dir}/${entry.name}`));
+      projects.push(normalizeProject(raw));
     } catch {
-      // skip corrupt files
+      console.error(`[storage] skipping corrupt project file: ${entry.name}`);
     }
   }
 
@@ -109,21 +107,21 @@ async function migrateLegacyBacklog(): Promise<Backlog | null> {
 
   try {
     const raw = JSON.parse(await readTextFile(legacyPath));
-    if (!raw?.projects?.length) return null;
+    if (!Array.isArray(raw?.projects) || raw.projects.length === 0) return null;
 
-    const backlog: Backlog = {
-      projects: raw.projects,
-      activeProjectId: raw.activeProjectId ?? raw.projects[0].id,
-    };
+    const projects = raw.projects.map((p: Record<string, unknown>) => normalizeProject(p));
+    const activeProjectId = raw.activeProjectId ?? projects[0].id;
+
+    const backlog: Backlog = { projects, activeProjectId };
 
     // Write each project to its own file
     await ensureProjectsDir();
-    for (const project of backlog.projects) {
+    for (const project of projects) {
       await writeProject(project);
     }
 
     // Write state
-    await writeState({ activeProjectId: backlog.activeProjectId! });
+    await writeState({ activeProjectId });
 
     // Rename legacy file so we don't migrate again
     await rename(legacyPath, `${dir}/backlog.json.migrated`);
@@ -137,31 +135,18 @@ async function migrateLegacyBacklog(): Promise<Backlog | null> {
 // ── Public API ───────────────────────────────────────────────────
 
 export async function loadBacklog(): Promise<Backlog> {
-  console.log("[storage] loadBacklog starting...");
-  const dir = await getGardenDir();
-  console.log("[storage] gardenDir:", dir);
-
   const projectsDir = await ensureProjectsDir();
-  console.log("[storage] projectsDir:", projectsDir);
-
   const dirEntries = await readDir(projectsDir);
-  console.log("[storage] project files:", dirEntries.map((e) => e.name));
   const hasProjects = dirEntries.some((e) => e.name?.endsWith(".json"));
 
   // If no project files exist, try migrating from legacy format
   if (!hasProjects) {
-    console.log("[storage] no projects found, attempting migration...");
     const migrated = await migrateLegacyBacklog();
-    if (migrated) {
-      console.log("[storage] migration complete, projects:", migrated.projects.map((p) => p.name));
-      return migrated;
-    }
-    console.log("[storage] migration returned null");
+    if (migrated) return migrated;
   }
 
   const projects = await readAllProjects();
   const state = await readState();
-  console.log("[storage] loaded", projects.length, "projects, state:", state);
 
   if (projects.length === 0) {
     return { projects: [], activeProjectId: null };
@@ -190,14 +175,4 @@ export async function deleteProjectFile(project: GardenProject): Promise<void> {
   if (await exists(path)) {
     await remove(path);
   }
-}
-
-export async function renameProjectFile(
-  oldProject: GardenProject,
-  newProject: GardenProject,
-): Promise<void> {
-  if (slugify(oldProject.name) !== slugify(newProject.name)) {
-    await deleteProjectFile(oldProject);
-  }
-  await writeProject(newProject);
 }

@@ -52,14 +52,18 @@ function App() {
 
     // Save active project id if it changed
     if (backlog.activeProjectId && backlog.activeProjectId !== prev.activeProjectId) {
-      saveActiveProjectId(backlog.activeProjectId);
+      saveActiveProjectId(backlog.activeProjectId).catch((err) =>
+        console.error("Failed to save active project ID:", err),
+      );
     }
 
     // Save any project whose data changed
-    const activeProject = backlog.projects.find((p) => p.id === backlog.activeProjectId);
-    const prevActiveProject = prev.projects.find((p) => p.id === prev.activeProjectId);
-    if (activeProject && activeProject !== prevActiveProject) {
-      saveProject(activeProject);
+    const currentActive = backlog.projects.find((p) => p.id === backlog.activeProjectId);
+    const prevActive = prev.projects.find((p) => p.id === prev.activeProjectId);
+    if (currentActive && currentActive !== prevActive) {
+      saveProject(currentActive).catch((err) =>
+        console.error("Failed to save project:", err),
+      );
     }
   }, [backlog, loaded]);
 
@@ -216,20 +220,19 @@ function App() {
 
       remaining.splice(targetIndex, 0, insertedItem);
 
-      const reindexed = remaining.map((item) => item);
       const activeByBucket = new Map<number, number>();
-      for (let index = 0; index < reindexed.length; index += 1) {
-        if (reindexed[index].completedAt !== null) {
+      for (let index = 0; index < remaining.length; index += 1) {
+        if (remaining[index].completedAt !== null) {
           continue;
         }
 
-        const bucket = reindexed[index].priorityBucket;
+        const bucket = remaining[index].priorityBucket;
         const nextPriority = activeByBucket.get(bucket) ?? 0;
-        reindexed[index] = { ...reindexed[index], priority: nextPriority };
+        remaining[index] = { ...remaining[index], priority: nextPriority };
         activeByBucket.set(bucket, nextPriority + 1);
       }
 
-      return { ...project, items: reindexed };
+      return { ...project, items: remaining };
     });
   }
 
@@ -250,6 +253,7 @@ function App() {
   }
 
   function visibleItems(): GardenItem[] {
+    if (!activeProject) return [];
     switch (selection.type) {
       case "all":
         return activeItems;
@@ -401,6 +405,7 @@ function App() {
                         key={item.id}
                         item={item}
                         editing={editing}
+                        maxBucket={activeProject.priorityBucketCount - 1}
                         onEditChange={setEditing}
                         onCommitEdit={commitEdit}
                         onDelete={deleteItem}
@@ -444,6 +449,7 @@ function App() {
                   key={item.id}
                   item={item}
                   editing={editing}
+                  maxBucket={activeProject.priorityBucketCount - 1}
                   onEditChange={setEditing}
                   onCommitEdit={commitEdit}
                   onDelete={deleteItem}
@@ -462,6 +468,7 @@ function App() {
 type TaskCardProps = {
   item: GardenItem;
   editing: EditingState | null;
+  maxBucket: number;
   onEditChange: (editing: EditingState | null) => void;
   onCommitEdit: (itemId: string) => void;
   onDelete: (itemId: string) => void;
@@ -477,6 +484,7 @@ type TaskCardProps = {
 function TaskCard({
   item,
   editing,
+  maxBucket,
   onEditChange,
   onCommitEdit,
   onDelete,
@@ -498,7 +506,7 @@ function TaskCard({
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
-      onEditChange(null);
+      onCommitEdit(item.id);
     }
   }
 
@@ -517,7 +525,7 @@ function TaskCard({
         <button className="ghost-icon" type="button" onClick={() => onMoveBucket(item.id, Math.max(0, item.priorityBucket - 1))}>
           ←
         </button>
-        <button className="ghost-icon" type="button" onClick={() => onMoveBucket(item.id, item.priorityBucket + 1)}>
+        <button className="ghost-icon" type="button" onClick={() => onMoveBucket(item.id, Math.min(maxBucket, item.priorityBucket + 1))}>
           →
         </button>
         <button className="ghost-icon" type="button" onClick={() => onComplete(item.id)}>
