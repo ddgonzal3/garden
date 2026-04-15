@@ -1,0 +1,1406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garden Priority Board Prototypes</title>
+  <style>
+    :root {
+      --bg: #101214;
+      --bg-elevated: #14171a;
+      --panel: #171a1e;
+      --panel-2: #1a1e22;
+      --card: #1b2024;
+      --card-2: #1d2227;
+      --text: #eef2f6;
+      --text-strong: #f6f8fa;
+      --text-mid: #b8c0ca;
+      --text-soft: #97a1ac;
+      --line: rgba(255, 255, 255, 0.06);
+      --line-strong: rgba(255, 255, 255, 0.11);
+      --shadow-soft: rgba(0, 0, 0, 0.18);
+      --shadow-deep: rgba(0, 0, 0, 0.38);
+      --openai-green: #7fc8ad;
+      --radius-xl: 22px;
+      --radius-lg: 16px;
+      --radius-md: 13px;
+      --radius-sm: 10px;
+      --font-sans: "SF Pro Display", "SF Pro Text", "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background:
+        radial-gradient(circle at top left, rgba(127, 200, 173, 0.08), transparent 26%),
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.03), transparent 22%),
+        linear-gradient(180deg, #131619 0%, #0f1113 100%);
+      color: var(--text);
+      font-family: var(--font-sans);
+    }
+
+    body {
+      padding: 32px;
+    }
+
+    .page {
+      max-width: 1520px;
+      margin: 0 auto;
+      display: grid;
+      gap: 28px;
+    }
+
+    .hero {
+      padding: 28px 30px;
+      border-radius: 26px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01)),
+        linear-gradient(180deg, rgba(24, 28, 32, 0.92), rgba(18, 21, 24, 0.94));
+      border: 1px solid var(--line);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+        0 14px 40px rgba(0, 0, 0, 0.26);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+      color: #dce4ea;
+      font-size: 12px;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--openai-green);
+      box-shadow: 0 0 0 6px rgba(127, 200, 173, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(30px, 4vw, 44px);
+      line-height: 1.03;
+      letter-spacing: -0.04em;
+      color: var(--text-strong);
+    }
+
+    .hero p {
+      max-width: 980px;
+      margin: 0;
+      color: var(--text-mid);
+      font-size: 16px;
+      line-height: 1.58;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.8fr 1fr;
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .note {
+      padding: 18px 18px 17px;
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+        rgba(12, 14, 16, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.035),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    }
+
+    .note h2 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-strong);
+      letter-spacing: 0.01em;
+    }
+
+    .note p,
+    .note li {
+      margin: 0;
+      color: var(--text-mid);
+      font-size: 14px;
+      line-height: 1.52;
+    }
+
+    .note ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .section {
+      display: grid;
+      gap: 16px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      padding: 0 4px;
+    }
+
+    .section-title {
+      display: grid;
+      gap: 6px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--text-mid);
+      font-size: 14px;
+      line-height: 1.55;
+      max-width: 860px;
+    }
+
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #d8e0e8;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+      white-space: nowrap;
+    }
+
+    .badge.recommended {
+      color: #e7f6ef;
+      background: rgba(127, 200, 173, 0.11);
+      border-color: rgba(127, 200, 173, 0.24);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 0 0 1px rgba(127, 200, 173, 0.05);
+    }
+
+    .board-shell {
+      padding: 18px;
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.008)),
+        linear-gradient(180deg, rgba(20, 23, 26, 0.96), rgba(15, 17, 20, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.045),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+        0 18px 52px rgba(0, 0, 0, 0.24);
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .column {
+      min-height: 720px;
+      display: flex;
+      flex-direction: column;
+      border-radius: var(--radius-xl);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.016), rgba(255, 255, 255, 0.008)),
+        linear-gradient(180deg, var(--panel-2), var(--panel));
+      border: 1px solid rgba(255, 255, 255, 0.045);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.045),
+        inset 0 -22px 42px rgba(0, 0, 0, 0.11),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+        0 10px 30px rgba(0, 0, 0, 0.14);
+      overflow: hidden;
+    }
+
+    .column-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 18px 14px;
+    }
+
+    .column-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      color: #f3f6f8;
+    }
+
+    .column-rule {
+      margin: 0 14px;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.03));
+    }
+
+    .count {
+      margin-left: auto;
+      min-width: 34px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      text-align: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #c6cfda;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.018)),
+        rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.045);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    }
+
+    .stack {
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      align-content: start;
+      flex: 1;
+    }
+
+    .card {
+      position: relative;
+      display: grid;
+      gap: 10px;
+      padding: 15px 16px 14px;
+      border-radius: var(--radius-md);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.008)),
+        linear-gradient(180deg, var(--card-2), var(--card));
+      border: 1px solid rgba(255, 255, 255, 0.045);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.05),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.012),
+        0 1px 1px rgba(0, 0, 0, 0.22),
+        0 12px 26px rgba(0, 0, 0, 0.12);
+      transition:
+        transform 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease,
+        background 180ms ease;
+    }
+
+    .card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.07);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.015),
+        0 1px 1px rgba(0, 0, 0, 0.22),
+        0 16px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-title {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.28;
+      letter-spacing: -0.03em;
+      font-weight: 650;
+      color: var(--text-strong);
+    }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 24px;
+      color: var(--text-mid);
+      font-size: 13px;
+      line-height: 1;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .meta-text {
+      color: #b7c0ca;
+    }
+
+    .subtle {
+      color: var(--text-soft);
+      font-weight: 600;
+    }
+
+    .card.compact .card-title {
+      font-size: 15px;
+    }
+
+    .card.short {
+      min-height: 96px;
+    }
+
+    .card.tall {
+      min-height: 120px;
+    }
+
+    .category-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      border: 1px solid rgba(var(--cat), 0.24);
+      color: rgb(var(--cat-soft));
+      background:
+        linear-gradient(180deg, rgba(var(--cat), 0.17), rgba(var(--cat), 0.12)),
+        rgba(255, 255, 255, 0.01);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 1px 0 rgba(0, 0, 0, 0.1);
+    }
+
+    .category-chip::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgb(var(--cat-soft));
+      box-shadow: 0 0 0 4px rgba(var(--cat), 0.08);
+    }
+
+    .rail-only .card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 8px;
+      bottom: 8px;
+      width: 4px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, rgba(var(--cat-soft), 1), rgba(var(--cat), 0.9));
+      box-shadow: 1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .rail-only .card {
+      padding-left: 18px;
+    }
+
+    .rail-only .card-meta {
+      color: rgb(var(--cat-soft));
+    }
+
+    .chip-only .card {
+      gap: 11px;
+    }
+
+    .chip-only .card-meta {
+      gap: 8px;
+    }
+
+    .soft-wash .card {
+      background:
+        radial-gradient(circle at top left, rgba(var(--cat), 0.085), transparent 52%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.008)),
+        linear-gradient(180deg, #1d2227, #1a1f23);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.055),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.014),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.34),
+        inset 0 0 24px rgba(var(--cat), 0.024),
+        0 1px 1px rgba(0, 0, 0, 0.22),
+        0 14px 28px rgba(0, 0, 0, 0.13);
+    }
+
+    .soft-wash .card-meta {
+      color: rgba(231, 236, 241, 0.88);
+    }
+
+    .soft-wash .meta-tag {
+      padding: 0;
+      border: 0;
+      background: transparent;
+      box-shadow: none;
+      font-size: 13px;
+      color: rgba(223, 229, 235, 0.86);
+    }
+
+    .soft-wash .meta-tag::before {
+      display: none;
+    }
+
+    .soft-wash-variants {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .variant-panel {
+      padding: 14px;
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.024), rgba(255, 255, 255, 0.008)),
+        linear-gradient(180deg, rgba(19, 22, 25, 0.96), rgba(14, 16, 19, 0.98));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.26),
+        0 16px 36px rgba(0, 0, 0, 0.18);
+    }
+
+    .variant-header {
+      display: grid;
+      gap: 5px;
+      padding: 2px 4px 12px;
+    }
+
+    .variant-header h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      color: var(--text-strong);
+    }
+
+    .variant-header p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-mid);
+    }
+
+    .mini-column {
+      min-height: 540px;
+    }
+
+    .rect-study-a .card {
+      background:
+        radial-gradient(circle at top left, rgba(var(--cat), 0.055), transparent 56%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.019), rgba(255, 255, 255, 0.008)),
+        linear-gradient(180deg, #1d2227, #1a1f23);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.055),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.014),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.34),
+        inset 0 0 20px rgba(var(--cat), 0.015),
+        0 1px 1px rgba(0, 0, 0, 0.2),
+        0 12px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .rect-study-a .meta-tag {
+      color: rgba(223, 229, 235, 0.84);
+    }
+
+    .rect-study-b .card {
+      background:
+        radial-gradient(circle at top left, rgba(var(--cat), 0.062), transparent 56%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.024), rgba(255, 255, 255, 0.009)),
+        linear-gradient(180deg, #1f2429, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.068),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.022),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.012),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 0 24px rgba(var(--cat), 0.016),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 14px 26px rgba(0, 0, 0, 0.13),
+        0 0 0 1px rgba(255, 255, 255, 0.012);
+    }
+
+    .rect-study-b .meta-tag {
+      color: rgba(229, 235, 240, 0.88);
+    }
+
+    .rect-study-c .card {
+      background:
+        radial-gradient(circle at top left, rgba(var(--cat), 0.058), transparent 58%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.01)),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.074),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.024),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 0 26px rgba(var(--cat), 0.014),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 18px 32px rgba(0, 0, 0, 0.15),
+        0 3px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .rect-study-c .meta-tag {
+      color: rgba(233, 238, 243, 0.9);
+    }
+
+    .light-study-top .card {
+      background:
+        radial-gradient(circle at 22% 16%, rgba(var(--cat), 0.075), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.014) 28%, rgba(255, 255, 255, 0.006) 55%),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.082),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.024),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 10px 22px rgba(255, 255, 255, 0.018),
+        inset 0 0 24px rgba(var(--cat), 0.016),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 18px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .light-study-top .meta-tag {
+      color: rgba(233, 238, 243, 0.9);
+    }
+
+    .light-study-edge .card {
+      background:
+        radial-gradient(circle at 18% 20%, rgba(var(--cat), 0.028), transparent 42%),
+        radial-gradient(circle at 84% 82%, rgba(var(--cat), 0.018), transparent 46%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.011) 24%, rgba(255, 255, 255, 0.007) 58%, rgba(255, 255, 255, 0.01) 100%),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.066),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.024),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.01),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 0 0 1px rgba(var(--cat), 0.022),
+        inset 0 0 14px rgba(var(--cat), 0.006),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 18px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .light-study-edge .meta-tag {
+      color: rgba(231, 237, 242, 0.89);
+    }
+
+    .l2-flat .card {
+      background:
+        radial-gradient(circle at 20% 22%, rgba(var(--cat), 0.018), transparent 44%),
+        radial-gradient(circle at 82% 80%, rgba(var(--cat), 0.01), transparent 48%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.024), rgba(255, 255, 255, 0.01) 24%, rgba(255, 255, 255, 0.007) 58%, rgba(255, 255, 255, 0.008) 100%),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.022),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.008),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 0 0 1px rgba(var(--cat), 0.016),
+        inset 0 0 10px rgba(var(--cat), 0.004),
+        0 1px 1px rgba(0, 0, 0, 0.22),
+        0 16px 28px rgba(0, 0, 0, 0.14);
+    }
+
+    .l2-flat .meta-tag {
+      color: rgba(229, 235, 240, 0.88);
+    }
+
+    .l2-balanced .card {
+      background:
+        radial-gradient(circle at 18% 20%, rgba(var(--cat), 0.026), transparent 44%),
+        radial-gradient(circle at 84% 82%, rgba(var(--cat), 0.015), transparent 48%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.027), rgba(255, 255, 255, 0.011) 24%, rgba(255, 255, 255, 0.007) 58%, rgba(255, 255, 255, 0.009) 100%),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.064),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.024),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.01),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 0 0 1px rgba(var(--cat), 0.02),
+        inset 0 0 12px rgba(var(--cat), 0.005),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 18px 30px rgba(0, 0, 0, 0.15);
+    }
+
+    .l2-balanced .meta-tag {
+      color: rgba(231, 237, 242, 0.89);
+    }
+
+    .l2-rich .card {
+      background:
+        radial-gradient(circle at 17% 19%, rgba(var(--cat), 0.036), transparent 42%),
+        radial-gradient(circle at 85% 83%, rgba(var(--cat), 0.02), transparent 46%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.012) 24%, rgba(255, 255, 255, 0.008) 58%, rgba(255, 255, 255, 0.011) 100%),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.068),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+        inset 0 0 0 2px rgba(255, 255, 255, 0.011),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+        inset 0 0 0 1px rgba(var(--cat), 0.024),
+        inset 0 0 14px rgba(var(--cat), 0.007),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 18px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .l2-rich .meta-tag {
+      color: rgba(232, 238, 243, 0.9);
+    }
+
+    .light-study-lower .card {
+      background:
+        radial-gradient(circle at 24% 84%, rgba(var(--cat), 0.072), transparent 48%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.008) 34%, rgba(255, 255, 255, 0.02) 100%),
+        linear-gradient(180deg, #20252a, #1b2025);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.074),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.022),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.34),
+        inset 0 -12px 22px rgba(255, 255, 255, 0.012),
+        inset 0 0 24px rgba(var(--cat), 0.016),
+        0 1px 1px rgba(0, 0, 0, 0.24),
+        0 18px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .light-study-lower .meta-tag {
+      color: rgba(233, 238, 243, 0.9);
+    }
+
+    .cat-variations {
+      --cat: 89, 183, 170;
+      --cat-soft: 112, 207, 191;
+    }
+
+    .cat-daw {
+      --cat: 94, 182, 170;
+      --cat-soft: 126, 212, 199;
+    }
+
+    .cat-clip {
+      --cat: 212, 171, 81;
+      --cat-soft: 233, 194, 111;
+    }
+
+    .cat-plugins {
+      --cat: 101, 152, 215;
+      --cat-soft: 132, 179, 236;
+    }
+
+    .cat-agent {
+      --cat: 203, 146, 83;
+      --cat-soft: 227, 176, 116;
+    }
+
+    .cat-design {
+      --cat: 121, 178, 131;
+      --cat-soft: 145, 202, 154;
+    }
+
+    .cat-none {
+      --cat: 138, 145, 155;
+      --cat-soft: 171, 178, 188;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .mini-note {
+      padding: 15px 16px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.045);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    }
+
+    .mini-note strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--text-strong);
+    }
+
+    .mini-note span {
+      color: var(--text-mid);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 1220px) {
+      .hero-grid,
+      .comparison,
+      .soft-wash-variants,
+      .board {
+        grid-template-columns: 1fr;
+      }
+
+      .column {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 18px;
+      }
+
+      .hero,
+      .board-shell {
+        padding: 16px;
+      }
+
+      .section-head {
+        flex-direction: column;
+        align-items: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Priority Board Study</div>
+      <h1>Tighter surfaces, clearer type, one category signal.</h1>
+      <p>
+        These prototypes keep the board calm and dense, but fix the current weak spots: the column trays have stronger edge definition,
+        the cards feel carved rather than flat, title and category contrast are much clearer, and each direction removes the duplicate
+        left-bar plus dot combination in favor of a single category indicator.
+      </p>
+
+      <div class="hero-grid">
+        <div class="note">
+          <h2>What changed across all three</h2>
+          <ul>
+            <li>Column surfaces now use a restrained inset frame and deeper floor shadow so the layout reads cleanly without getting glossy.</li>
+            <li>Card depth is built from tight inner highlights plus a very short outer lift, instead of relying on a bright border or muddy glow.</li>
+            <li>Category text sits closer to secondary contrast, not tertiary, so it stays readable at a glance in a dense board.</li>
+            <li>Count pills and headers are sharper and more intentional, with better micro-contrast and less visual fuzz.</li>
+          </ul>
+        </div>
+        <div class="note">
+          <h2>My recommendation</h2>
+          <p>
+            <strong>Prototype B</strong> feels closest to an OpenAI-like product surface: the cards stay neutral and clean, while the category chip
+            carries the only color cue. It removes the strip noise that builds up in long columns, but still keeps categories obvious.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>Prototype A: Rail Only</h2>
+          <p>
+            Keeps the left rail, removes the category dot, and strengthens the card surface so the accent feels like a quiet locator instead of the whole design.
+          </p>
+        </div>
+        <div class="badge">Lowest implementation risk</div>
+      </div>
+
+      <div class="board-shell rail-only">
+        <div class="board">
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P1</div>
+              <div class="count">18+</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-variations">
+                <h3 class="card-title">Losing variations when find-like-this on a clip with variations</h3>
+                <div class="card-meta"><span class="meta-text">Variations</span></div>
+              </article>
+              <article class="card tall cat-variations">
+                <h3 class="card-title">Comp sound with variations not reflecting in panel</h3>
+                <div class="card-meta"><span class="meta-text">Variations</span></div>
+              </article>
+              <article class="card cat-daw">
+                <h3 class="card-title">Duplicate sections x canvas</h3>
+                <div class="card-meta"><span class="meta-text">DAW</span></div>
+              </article>
+              <article class="card tall cat-agent">
+                <h3 class="card-title">Clarification tool</h3>
+                <div class="card-meta"><span class="meta-text">Agent</span></div>
+              </article>
+              <article class="card tall cat-design">
+                <h3 class="card-title">Track headers should keep a fixed width and never resize horizontally</h3>
+                <div class="card-meta"><span class="meta-text">Design</span></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-text">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-text">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-text">Plugins</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Internal timeline ruler parity</h3>
+                <div class="card-meta"><span class="meta-text">Clip Editor</span></div>
+              </article>
+              <article class="card cat-none">
+                <h3 class="card-title">Test</h3>
+                <div class="card-meta"><span class="meta-text">Uncategorized</span></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P3</div>
+              <div class="count">1</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-clip">
+                <h3 class="card-title">Scrollable foots when catalog expands such that the text gets cut off</h3>
+                <div class="card-meta"><span class="meta-text">Clip Editor</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>Prototype B: Category Chip</h2>
+          <p>
+            Removes the rail entirely and uses a single, restrained chip as the category cue. This is the cleanest and most system-like direction.
+          </p>
+        </div>
+        <div class="badge recommended">Recommended</div>
+      </div>
+
+      <div class="board-shell chip-only">
+        <div class="board">
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P1</div>
+              <div class="count">18+</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-variations">
+                <h3 class="card-title">Losing variations when find-like-this on a clip with variations</h3>
+                <div class="card-meta"><span class="category-chip">Variations</span></div>
+              </article>
+              <article class="card tall cat-variations">
+                <h3 class="card-title">Comp sound with variations not reflecting in panel</h3>
+                <div class="card-meta"><span class="category-chip">Variations</span></div>
+              </article>
+              <article class="card cat-daw">
+                <h3 class="card-title">Duplicate sections x canvas</h3>
+                <div class="card-meta"><span class="category-chip">DAW</span></div>
+              </article>
+              <article class="card tall cat-agent">
+                <h3 class="card-title">Clarification tool</h3>
+                <div class="card-meta"><span class="category-chip">Agent</span></div>
+              </article>
+              <article class="card tall cat-design">
+                <h3 class="card-title">Track headers should keep a fixed width and never resize horizontally</h3>
+                <div class="card-meta"><span class="category-chip">Design</span></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="category-chip">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="category-chip">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="category-chip">Plugins</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Internal timeline ruler parity</h3>
+                <div class="card-meta"><span class="category-chip">Clip Editor</span></div>
+              </article>
+              <article class="card cat-none">
+                <h3 class="card-title">Test</h3>
+                <div class="card-meta"><span class="category-chip">Uncategorized</span></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P3</div>
+              <div class="count">1</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-clip">
+                <h3 class="card-title">Scrollable foots when catalog expands such that the text gets cut off</h3>
+                <div class="card-meta"><span class="category-chip">Clip Editor</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>Prototype C: Soft Wash</h2>
+          <p>
+            Uses a barely-there color wash inside each card instead of a rail or chip. This is the most refined option, but also the most subtle.
+          </p>
+        </div>
+        <div class="badge">Most understated</div>
+      </div>
+
+      <div class="board-shell soft-wash">
+        <div class="board">
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P1</div>
+              <div class="count">18+</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-variations">
+                <h3 class="card-title">Losing variations when find-like-this on a clip with variations</h3>
+                <div class="card-meta"><span class="meta-tag">Variations</span></div>
+              </article>
+              <article class="card tall cat-variations">
+                <h3 class="card-title">Comp sound with variations not reflecting in panel</h3>
+                <div class="card-meta"><span class="meta-tag">Variations</span></div>
+              </article>
+              <article class="card cat-daw">
+                <h3 class="card-title">Duplicate sections x canvas</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card tall cat-agent">
+                <h3 class="card-title">Clarification tool</h3>
+                <div class="card-meta"><span class="meta-tag">Agent</span></div>
+              </article>
+              <article class="card tall cat-design">
+                <h3 class="card-title">Track headers should keep a fixed width and never resize horizontally</h3>
+                <div class="card-meta"><span class="meta-tag">Design</span></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Internal timeline ruler parity</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-none">
+                <h3 class="card-title">Test</h3>
+                <div class="card-meta"><span class="meta-tag">Uncategorized</span></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="column">
+            <div class="column-head">
+              <div class="column-title">P3</div>
+              <div class="count">1</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-clip">
+                <h3 class="card-title">Scrollable foots when catalog expands such that the text gets cut off</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>Prototype C Variants: Card Surface Studies</h2>
+          <p>
+            These keep the category as plain text and explore the full task rectangle instead: how much inner border definition, inset depth,
+            and outer lift should the card have if we want it to feel as considered as the count badge without becoming flashy.
+          </p>
+        </div>
+        <div class="badge">Focused on micro-detail</div>
+      </div>
+
+      <div class="soft-wash-variants">
+        <div class="variant-panel rect-study-a">
+          <div class="variant-header">
+            <h3>C1: Whisper Frame</h3>
+            <p>Softest perimeter. The card feels almost poured into the column with a very gentle inner edge and low overall contrast.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="variant-panel rect-study-b">
+          <div class="variant-header">
+            <h3>C2: Inset Frame</h3>
+            <p>Closest to the count badge language. Crisper inner border, clearer top highlight, and the best balance of visibility and restraint.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="variant-panel rect-study-c">
+          <div class="variant-header">
+            <h3>C3: Lifted Slate</h3>
+            <p>A touch more vertical lift and polish. Still clean, but the rectangle reads more like an object resting on the tray than a recessed panel.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>Lifted Slate: Light Placement Studies</h2>
+          <p>
+            Same general rectangle, different brightness logic. These are meant to test whether the card should get brighter near the title,
+            around the frame, or lower in the body so the title area stays calmer and contrast remains more stable.
+          </p>
+        </div>
+        <div class="badge recommended">Best next comparison</div>
+      </div>
+
+      <div class="soft-wash-variants">
+        <div class="variant-panel light-study-top">
+          <div class="variant-header">
+            <h3>L1: Top Glow</h3>
+            <p>Brightness lives near the title and upper surface. More dramatic, but also the most likely to compete with reading contrast.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="variant-panel light-study-edge">
+          <div class="variant-header">
+            <h3>L2: Edge Halo</h3>
+            <p>Brightness is pushed outward into the frame and perimeter. This refined version smooths the color distribution so the card feels shaped, not glowing.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="variant-panel light-study-lower">
+          <div class="variant-header">
+            <h3>L3: Lower Bloom</h3>
+            <p>Brightness sinks toward the bottom of the rectangle. The title area stays quieter while the card still feels alive and dimensional.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>L2: Edge Halo Micro-Variants</h2>
+          <p>
+            These are all the same `L2` idea with smaller moves. The goal here is to find the cleanest level of edge tint and highlight without reintroducing blotchiness or glow.
+          </p>
+        </div>
+        <div class="badge">Tight comparison</div>
+      </div>
+
+      <div class="soft-wash-variants">
+        <div class="variant-panel l2-flat">
+          <div class="variant-header">
+            <h3>L2A: Neutral Edge</h3>
+            <p>Most restrained. Flatter, drier, and closest to pure graphite with only a whisper of category tint at the frame.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="variant-panel l2-balanced">
+          <div class="variant-header">
+            <h3>L2B: Balanced Edge</h3>
+            <p>Middle ground. Smooth frame definition, modest tint, and enough shape to feel intentional without reading as a glow.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <div class="variant-panel l2-rich">
+          <div class="variant-header">
+            <h3>L2C: Rich Edge</h3>
+            <p>Slightly fuller and more premium. Still smooth, but with a bit more color energy and frame presence than the other two.</p>
+          </div>
+
+          <section class="column mini-column">
+            <div class="column-head">
+              <div class="column-title">P2</div>
+              <div class="count">6</div>
+            </div>
+            <div class="column-rule"></div>
+            <div class="stack">
+              <article class="card tall cat-daw">
+                <h3 class="card-title">Stretch: Shift for Ableton, Option for Logic</h3>
+                <div class="card-meta"><span class="meta-tag">DAW</span></div>
+              </article>
+              <article class="card cat-clip">
+                <h3 class="card-title">Warp markers</h3>
+                <div class="card-meta"><span class="meta-tag">Clip Editor</span></div>
+              </article>
+              <article class="card cat-plugins">
+                <h3 class="card-title">Load Serum preset for bassline</h3>
+                <div class="card-meta"><span class="meta-tag">Plugins</span></div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <h2>Tradeoff Summary</h2>
+          <p>
+            The three original directions are still useful, but these `C` variants and light studies are probably closer to where you want to land if the count badge is the north star.
+          </p>
+        </div>
+      </div>
+
+      <div class="comparison">
+        <div class="mini-note">
+          <strong>C1: Whisper Frame</strong>
+          <span>Best if you want the quietest board possible. Very elegant, but it risks feeling a touch too soft once a column fills up.</span>
+        </div>
+        <div class="mini-note">
+          <strong>C2: Inset Frame</strong>
+          <span>Best balance overall. This is the strongest translation of the count badge language onto the full rectangle, and it keeps the board crisp without shouting.</span>
+        </div>
+        <div class="mini-note">
+          <strong>C3: Lifted Slate</strong>
+          <span>Best if you want the cards to feel more premium and tactile. It has more object-ness, but it is the easiest one to overdo in SwiftUI.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

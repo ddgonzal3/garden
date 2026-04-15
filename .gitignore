@@ -1,19 +1,17 @@
-# Xcode
-*.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/xcuserdata/
-*.xcworkspace/xcuserdata/
-DerivedData/
-*.hmap
-*.ipa
-*.dSYM.zip
-*.dSYM
-build/
-
-# Swift Package Manager
-.build/
-Packages/
-
 # macOS
 .DS_Store
 *.swp
-*~.nib
+
+# Local agent tooling
+.superpowers/
+.agents/
+
+# Web app
+node_modules/
+dist/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Tauri / Rust
+src-tauri/target/
