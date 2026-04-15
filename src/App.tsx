@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent, KeyboardEvent } from "react";
 import {
   categoryColor,
@@ -8,9 +8,12 @@ import {
   getCompletedItems,
   getItemsInBucket,
   getItemsInCategory,
-  loadBacklog,
-  saveBacklog,
 } from "./lib/backlog";
+import {
+  loadBacklog as loadFromDisk,
+  saveProject,
+  saveActiveProjectId,
+} from "./lib/storage";
 import type { Backlog, GardenItem, GardenProject, SidebarSelection } from "./types";
 
 type EditingState = {
@@ -19,20 +22,51 @@ type EditingState = {
 };
 
 function App() {
-  const [backlog, setBacklog] = useState<Backlog>(() => loadBacklog());
+  const [backlog, setBacklog] = useState<Backlog>({ projects: [], activeProjectId: null });
+  const [loaded, setLoaded] = useState(false);
   const [selection, setSelection] = useState<SidebarSelection>({ type: "priorityBoard" });
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropBucket, setDropBucket] = useState<number | null>(null);
   const [dropItemId, setDropItemId] = useState<string | null>(null);
 
+  // Load from disk on mount
   useEffect(() => {
-    saveBacklog(backlog);
-  }, [backlog]);
+    loadFromDisk()
+      .then((data) => {
+        setBacklog(data);
+        setLoaded(true);
+      })
+      .catch((err) => {
+        console.error("Failed to load backlog from disk:", err);
+        setLoaded(true);
+      });
+  }, []);
 
-  const activeProject = getActiveProject(backlog);
-  const activeItems = getActiveItems(activeProject);
-  const completedItems = getCompletedItems(activeProject);
+  // Persist active project to disk whenever it changes
+  const prevBacklogRef = useRef(backlog);
+  useEffect(() => {
+    if (!loaded) return;
+    const prev = prevBacklogRef.current;
+    prevBacklogRef.current = backlog;
+
+    // Save active project id if it changed
+    if (backlog.activeProjectId && backlog.activeProjectId !== prev.activeProjectId) {
+      saveActiveProjectId(backlog.activeProjectId);
+    }
+
+    // Save any project whose data changed
+    const activeProject = backlog.projects.find((p) => p.id === backlog.activeProjectId);
+    const prevActiveProject = prev.projects.find((p) => p.id === prev.activeProjectId);
+    if (activeProject && activeProject !== prevActiveProject) {
+      saveProject(activeProject);
+    }
+  }, [backlog, loaded]);
+
+  const hasData = loaded && backlog.projects.length > 0;
+  const activeProject = hasData ? getActiveProject(backlog) : null;
+  const activeItems = activeProject ? getActiveItems(activeProject) : [];
+  const completedItems = activeProject ? getCompletedItems(activeProject) : [];
 
   function mutateActiveProject(
     updater: (project: GardenProject) => GardenProject,
@@ -57,6 +91,8 @@ function App() {
     }
 
     const project = createProject(name.trim());
+    saveProject(project);
+    saveActiveProjectId(project.id);
     setBacklog((current) => ({
       projects: [...current.projects, project],
       activeProjectId: project.id,
@@ -234,6 +270,10 @@ function App() {
         : selection.type === "completed"
           ? "Completed"
           : selection.category;
+
+  if (!loaded || !activeProject) {
+    return <div className="app-shell" />;
+  }
 
   return (
     <div className="app-shell">
@@ -504,7 +544,7 @@ function TaskCard({
         <h2 className="task-title">{item.title || "Untitled task"}</h2>
       )}
 
-      <div className="task-meta" style={{ color }}>
+      <div className="task-meta">
         {item.category}
       </div>
     </article>
