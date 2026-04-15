@@ -33,7 +33,9 @@ struct Backlog: Codable {
     var categories: [String] { activeProject?.categories ?? [] }
     var activeItems: [GardenItem] { activeProject?.activeItems ?? [] }
     var completedItems: [GardenItem] { activeProject?.completedItems ?? [] }
+    var priorityBucketCount: Int { activeProject?.priorityBucketCount ?? 3 }
     func items(in category: String) -> [GardenItem] { activeProject?.items(in: category) ?? [] }
+    func items(inBucket bucket: Int) -> [GardenItem] { activeProject?.items(inBucket: bucket) ?? [] }
 
     // MARK: - Codable (with legacy migration)
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 enum SidebarSelection: Hashable {
     case all
+    case priorityBoard
     case category(String)
     case completed
 }
@@ -90,6 +91,21 @@ struct SidebarView: View {
                 }
                 .tag(SidebarSelection.all)
                 .accessibilityIdentifier("sidebar-all")
+            }
+
+            Section {
+                Label {
+                    HStack {
+                        Text("Priority Board")
+                        Spacer()
+                        Text("\(store.backlog.activeItems.count)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "square.grid.3x1.below.line.grid.1x2")
+                }
+                .tag(SidebarSelection.priorityBoard)
             }
 
             Section("Categories") {

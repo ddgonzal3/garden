@@ -12,6 +12,11 @@ struct ItemRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
+            Text("P\(item.priorityBucket + 1)")
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .frame(width: 22)
+
             Button(action: {
                 if item.isCompleted {
                     var updated = item
@@ -80,6 +85,20 @@ struct ItemRow: View {
         .contentShape(Rectangle())
         .contextMenu {
             if !item.isCompleted {
+                Menu("Priority") {
+                    ForEach(0..<store.backlog.priorityBucketCount, id: \.self) { bucket in
+                        Button {
+                            store.moveItemToBucket(item.id, bucket: bucket)
+                        } label: {
+                            HStack {
+                                Text("P\(bucket + 1)")
+                                if item.priorityBucket == bucket {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                }
                 Button("Complete") { store.completeItem(item.id) }
                 Menu("Move to") {
                     ForEach(store.backlog.categories.filter { $0 != item.category }, id: \.self) { cat in

@@ -13,9 +13,17 @@ A native macOS SwiftUI task manager with Claude AI integration.
 - **Persistence**: JSON file at `~/.garden/backlog.json`, atomic writes, file watching for external sync
 - **AI**: `AgentService` talks to Claude API with tool-use for backlog mutations
 
+## Build & Run
+
+After making changes, build and launch the app:
+```bash
+./scripts/run.sh
+```
+This builds, kills any existing instance, and opens the app in the foreground.
+
 ## Conventions
 
-- Items are ordered by `priority` (lower = higher in list)
+- Items are ordered by `priority` (lower = higher in list) within their `priorityBucket` (0 = P1, 1 = P2, etc.)
 - Categories are stored as ordered string arrays on each project
 - All mutations go through BacklogStore methods which call `save()` at the end
 - File watcher debounces to avoid reload loops after app's own writes

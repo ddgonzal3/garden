@@ -192,9 +192,18 @@ class AgentService: ObservableObject {
 
         guard !title.isEmpty else { return "Error: title is required" }
 
-        let item = GardenItem(title: title, notes: notes, category: category)
+        let bucket: Int
+        if let p = input["priority"] as? Int {
+            bucket = p
+        } else if let p = input["priority"] as? String, let n = Int(p) {
+            bucket = n
+        } else {
+            bucket = 0
+        }
+
+        let item = GardenItem(title: title, notes: notes, category: category, priorityBucket: bucket)
         backlogStore.addItem(item, inProject: projectId)
-        return "Added '\(title)' to \(category)"
+        return "Added '\(title)' to \(category) at P\(bucket)"
     }
 
     private func updateItem(_ input: [String: Any]) -> String {
@@ -220,6 +229,8 @@ class AgentService: ObservableObject {
         if let title = input["title"] as? String { item.title = title }
         if let notes = input["notes"] as? String { item.notes = notes }
         if let category = input["category"] as? String { item.category = category }
+        if let p = input["priority"] as? Int { item.priorityBucket = p }
+        else if let p = input["priority"] as? String, let n = Int(p) { item.priorityBucket = n }
 
         // If project param is specified, move the item to that project
         if let targetName = input["project"] as? String {
@@ -429,13 +440,14 @@ class AgentService: ObservableObject {
                         "notes": ["type": "string", "description": "Optional notes or details"],
                         "category": ["type": "string", "description": "Category name. Creates the category if it doesn't exist."],
                         "project": ["type": "string", "description": "Project name. Defaults to the active project."],
+                        "priority": ["type": "integer", "description": "Priority bucket (0 = P0/highest). Defaults to 0."],
                     ] as [String: Any],
                     "required": ["title"],
                 ],
             ],
             [
                 "name": "update_item",
-                "description": "Update an existing item's title, notes, category, or move it to a different project",
+                "description": "Update an existing item's title, notes, category, priority bucket, or move it to a different project",
                 "input_schema": [
                     "type": "object",
                     "properties": [
@@ -444,6 +456,7 @@ class AgentService: ObservableObject {
                         "notes": ["type": "string", "description": "New notes"],
                         "category": ["type": "string", "description": "New category"],
                         "project": ["type": "string", "description": "Move item to this project"],
+                        "priority": ["type": "integer", "description": "Priority bucket (0 = P0/highest)"],
                     ] as [String: Any],
                     "required": ["id"],
                 ],

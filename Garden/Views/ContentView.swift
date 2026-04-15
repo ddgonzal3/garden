@@ -3,11 +3,11 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var store: BacklogStore
     @EnvironmentObject var agent: AgentService
-    @State private var selectedCategory: SidebarSelection? = .all
+    @State private var selectedCategory: SidebarSelection? = .priorityBoard
     @State private var showingAddItem = false
     @State private var showingAddCategory = false
     @State private var showingAddProject = false
-    @State private var showingChat = true
+    @State private var showingChat = false
 
     var body: some View {
         HSplitView {
@@ -18,7 +18,7 @@ struct ContentView: View {
                     showingAddProject: $showingAddProject
                 )
             } detail: {
-                detailContent(for: selectedCategory ?? .all)
+                detailContent(for: selectedCategory ?? .priorityBoard)
             }
             .navigationTitle(detailTitle)
 
@@ -30,7 +30,15 @@ struct ContentView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 HStack(spacing: 8) {
-                    Button(action: { showingAddItem = true }) {
+                    Button(action: {
+                        if selectedCategory == .priorityBoard {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                store.addItemToBucket(0)
+                            }
+                        } else {
+                            showingAddItem = true
+                        }
+                    }) {
                         Image(systemName: "plus")
                     }
                     .keyboardShortcut("n", modifiers: .command)
@@ -56,7 +64,7 @@ struct ContentView: View {
             AddProjectSheet()
         }
         .onChange(of: store.backlog.activeProjectId) {
-            selectedCategory = .all
+            selectedCategory = .priorityBoard
         }
         .frame(minWidth: 800, minHeight: 500)
     }
@@ -66,6 +74,8 @@ struct ContentView: View {
         switch selection {
         case .all:
             AllItemsView()
+        case .priorityBoard:
+            PriorityBoardView()
         case .category(let category):
             CategoryDetailView(category: category)
         case .completed:
@@ -75,6 +85,7 @@ struct ContentView: View {
 
     private var detailTitle: String {
         switch selectedCategory {
+        case .priorityBoard: return "Priority"
         case .category(let cat): return cat
         case .completed: return "Completed"
         default: return store.backlog.activeProject?.name ?? "Garden"

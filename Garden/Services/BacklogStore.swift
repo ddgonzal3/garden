@@ -247,6 +247,87 @@ class BacklogStore: ObservableObject {
         }
     }
 
+    // MARK: - Priority bucket mutations
+
+    func moveItemToBucket(_ itemId: UUID, bucket: Int) {
+        guard let idx = projectIndex() else { return }
+        guard let itemIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == itemId }) else { return }
+        backlog.projects[idx].items[itemIdx].priorityBucket = bucket
+        // Place at end of target bucket
+        let maxPriority = backlog.projects[idx].items
+            .filter { $0.priorityBucket == bucket && !$0.isCompleted && $0.id != itemId }
+            .map(\.priority).max() ?? -1
+        backlog.projects[idx].items[itemIdx].priority = maxPriority + 1
+        save()
+    }
+
+    func moveItemInBucket(_ itemId: UUID, beforeItemId: UUID) {
+        guard let idx = projectIndex() else { return }
+        guard let dragIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == itemId }) else { return }
+        guard let targetIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == beforeItemId }) else { return }
+
+        let targetBucket = backlog.projects[idx].items[targetIdx].priorityBucket
+        backlog.projects[idx].items[dragIdx].priorityBucket = targetBucket
+
+        // Remove and reinsert
+        var item = backlog.projects[idx].items.remove(at: dragIdx)
+        item.priorityBucket = targetBucket
+
+        guard let newTargetIdx = backlog.projects[idx].items.firstIndex(where: { $0.id == beforeItemId }) else {
+            backlog.projects[idx].items.append(item)
+            recalculateBucketPriorities(bucket: targetBucket, projectIdx: idx)
+            save()
+            return
+        }
+
+        backlog.projects[idx].items.insert(item, at: newTargetIdx)
+        recalculateBucketPriorities(bucket: targetBucket, projectIdx: idx)
+        save()
+    }
+
+    private func recalculateBucketPriorities(bucket: Int, projectIdx idx: Int) {
+        let bucketItemIndices = backlog.projects[idx].items.enumerated()
+            .filter { $0.element.priorityBucket == bucket && !$0.element.isCompleted }
+            .map { $0.offset }
+        for (priority, itemIdx) in bucketItemIndices.enumerated() {
+            backlog.projects[idx].items[itemIdx].priority = priority
+        }
+    }
+
+    func addItemToBucket(_ bucket: Int) {
+        guard let idx = projectIndex() else { return }
+        let maxPriority = backlog.projects[idx].items
+            .filter { $0.priorityBucket == bucket && !$0.isCompleted }
+            .map(\.priority).max() ?? -1
+        var newItem = GardenItem(title: "", priorityBucket: bucket)
+        newItem.priority = maxPriority + 1
+        backlog.projects[idx].items.append(newItem)
+        editingItemId = newItem.id
+        save()
+    }
+
+    func addPriorityBucket() {
+        guard let idx = projectIndex() else { return }
+        backlog.projects[idx].priorityBucketCount += 1
+        save()
+    }
+
+    func removePriorityBucket(_ bucket: Int) {
+        guard let idx = projectIndex() else { return }
+        guard backlog.projects[idx].priorityBucketCount > 1 else { return }
+        let targetBucket = max(0, bucket - 1)
+        for i in backlog.projects[idx].items.indices {
+            if backlog.projects[idx].items[i].priorityBucket == bucket {
+                backlog.projects[idx].items[i].priorityBucket = targetBucket
+            }
+            if backlog.projects[idx].items[i].priorityBucket > bucket {
+                backlog.projects[idx].items[i].priorityBucket -= 1
+            }
+        }
+        backlog.projects[idx].priorityBucketCount -= 1
+        save()
+    }
+
     // MARK: - Category mutations
 
     func addCategory(_ name: String, inProject projectId: UUID? = nil) {

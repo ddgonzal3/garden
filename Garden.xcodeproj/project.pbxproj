@@ -29,6 +29,9 @@
 		DA9AC228ADDEF2BADF30A89A /* AgentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0AFBA7B88FA19AC2D4BD155 /* AgentService.swift */; };
 		F90FD51CBE8476D2E30C474D /* GardenProject.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3671CD5AB962895D10CA77D5 /* GardenProject.swift */; };
 		FFFF69F6E60BB0249C0FD2BF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D8D69B362186AB5F8A665668 /* Assets.xcassets */; };
+		AA11BB22CC33DD44EE55FF66 /* PriorityBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF67 /* PriorityBoardView.swift */; };
+		AA11BB22CC33DD44EE55FF68 /* CategoryColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF69 /* CategoryColor.swift */; };
+		BB22CC33DD44EE55FF660011 /* ItemDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF660012 /* ItemDetailSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +48,9 @@
 		02C59649B1EB3657E43C1662 /* Garden.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Garden.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		033A4080AE9512295A5FEF33 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		1A7237629BDEC9C10C538B31 /* ItemRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemRow.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF67 /* PriorityBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriorityBoardView.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF69 /* CategoryColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryColor.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF660012 /* ItemDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemDetailSheet.swift; sourceTree = "<group>"; };
 		259C65EA67FA5483ABC338F9 /* AllItemsNavigationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AllItemsNavigationTests.swift; sourceTree = "<group>"; };
 		2A2E4BB29883AF17EB94A4C0 /* AddProjectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProjectSheet.swift; sourceTree = "<group>"; };
 		32B13480465DB52DF36594F6 /* AddItemSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddItemSheet.swift; sourceTree = "<group>"; };
@@ -112,9 +118,12 @@
 				2A2E4BB29883AF17EB94A4C0 /* AddProjectSheet.swift */,
 				70AEC4564AA9412061E81145 /* AgentChatView.swift */,
 				FD5888356A710FD504A62143 /* AllItemsView.swift */,
+				AA11BB22CC33DD44EE55FF69 /* CategoryColor.swift */,
 				FA6DCEA52CA304E0117943BD /* CategoryDetailView.swift */,
 				ECDBDA24A5A9254B6D172F1C /* ContentView.swift */,
+				BB22CC33DD44EE55FF660012 /* ItemDetailSheet.swift */,
 				1A7237629BDEC9C10C538B31 /* ItemRow.swift */,
+				AA11BB22CC33DD44EE55FF67 /* PriorityBoardView.swift */,
 				53AAA201429ADFA122A77BE6 /* SettingsView.swift */,
 				033A4080AE9512295A5FEF33 /* SidebarView.swift */,
 			);
@@ -251,6 +260,7 @@
 				B7BCD7D673A7C6ED1D34EA55 /* AllItemsView.swift in Sources */,
 				48E6D5F1F0560E9EA5E59976 /* Backlog.swift in Sources */,
 				30244A95D44A34FD70EF09C6 /* BacklogStore.swift in Sources */,
+				AA11BB22CC33DD44EE55FF68 /* CategoryColor.swift in Sources */,
 				89AE60F27C1CAD0FC99F7C58 /* CategoryDetailView.swift in Sources */,
 				4903A02E80D42F12A5FD95E1 /* ChatMessage.swift in Sources */,
 				56AE4E14BE7BD149F4276DA0 /* ContentView.swift in Sources */,
@@ -260,6 +270,8 @@
 				F90FD51CBE8476D2E30C474D /* GardenProject.swift in Sources */,
 				D6A5BCCBBD4482B57CB51B2E /* ItemRow.swift in Sources */,
 				105F72F4B3EAB9320813CF63 /* KeychainService.swift in Sources */,
+				BB22CC33DD44EE55FF660011 /* ItemDetailSheet.swift in Sources */,
+				AA11BB22CC33DD44EE55FF66 /* PriorityBoardView.swift in Sources */,
 				17C51D9E62AD9FDDD2C3C101 /* SettingsView.swift in Sources */,
 				4FD1BD9EF30B64C44C17D09F /* SidebarView.swift in Sources */,
 			);

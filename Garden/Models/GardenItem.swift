@@ -15,6 +15,7 @@ struct GardenItem: Identifiable, Equatable, Transferable {
     var notes: String
     var category: String
     var priority: Int
+    var priorityBucket: Int
     var createdAt: Date
     var completedAt: Date?
 
@@ -26,6 +27,7 @@ struct GardenItem: Identifiable, Equatable, Transferable {
         notes: String = "",
         category: String = "Uncategorized",
         priority: Int = 0,
+        priorityBucket: Int = 0,
         createdAt: Date = Date(),
         completedAt: Date? = nil
     ) {
@@ -34,6 +36,7 @@ struct GardenItem: Identifiable, Equatable, Transferable {
         self.notes = notes
         self.category = category
         self.priority = priority
+        self.priorityBucket = priorityBucket
         self.createdAt = createdAt
         self.completedAt = completedAt
     }
@@ -42,7 +45,7 @@ struct GardenItem: Identifiable, Equatable, Transferable {
 // Custom Codable to handle null dates with iso8601 strategy
 extension GardenItem: Codable {
     enum CodingKeys: String, CodingKey {
-        case id, title, notes, category, priority, createdAt, completedAt
+        case id, title, notes, category, priority, priorityBucket, priorityLevel, createdAt, completedAt
     }
 
     init(from decoder: Decoder) throws {
@@ -52,6 +55,19 @@ extension GardenItem: Codable {
         notes = try container.decodeIfPresent(String.self, forKey: .notes) ?? ""
         category = try container.decode(String.self, forKey: .category)
         priority = try container.decode(Int.self, forKey: .priority)
+        // Migrate from old PriorityLevel enum if present
+        if let bucket = try? container.decode(Int.self, forKey: .priorityBucket) {
+            priorityBucket = bucket
+        } else if let oldLevel = try? container.decode(String.self, forKey: .priorityLevel) {
+            switch oldLevel {
+            case "high": priorityBucket = 0
+            case "medium": priorityBucket = 1
+            case "low": priorityBucket = 2
+            default: priorityBucket = 0
+            }
+        } else {
+            priorityBucket = 0
+        }
 
         let createdStr = try container.decode(String.self, forKey: .createdAt)
         createdAt = ISO8601DateFormatter().date(from: createdStr) ?? Date()
@@ -70,6 +86,7 @@ extension GardenItem: Codable {
         try container.encode(notes, forKey: .notes)
         try container.encode(category, forKey: .category)
         try container.encode(priority, forKey: .priority)
+        try container.encode(priorityBucket, forKey: .priorityBucket)
         try container.encode(ISO8601DateFormatter().string(from: createdAt), forKey: .createdAt)
         if let completedAt {
             try container.encode(ISO8601DateFormatter().string(from: completedAt), forKey: .completedAt)
