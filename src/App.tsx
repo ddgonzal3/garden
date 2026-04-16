@@ -270,6 +270,7 @@ function App() {
           priority: nextPriority,
           createdAt: new Date().toISOString(),
           completedAt: null,
+          status: "idle",
         };
 
         return { ...project, categories, items: [...project.items, item] };
@@ -290,6 +291,13 @@ function App() {
   function completeItem(itemId: string) {
     updateItem(itemId, (item) => ({ ...item, completedAt: new Date().toISOString() }));
     setSelectedId(null);
+  }
+
+  function toggleInProgress(itemId: string) {
+    updateItem(itemId, (item) => ({
+      ...item,
+      status: item.status === "inProgress" ? "idle" : "inProgress",
+    }));
   }
 
   function deleteItem(itemId: string) {
@@ -575,15 +583,6 @@ function App() {
   // Find the actively dragged item for the overlay
   const activeDragItem = activeProject?.items.find((item) => item.id === activeDragId) ?? null;
 
-  const pageTitle =
-    selection.type === "priorityBoard"
-      ? "Priority"
-      : selection.type === "all"
-        ? "All"
-        : selection.type === "completed"
-          ? "Completed"
-          : selection.category;
-
   // Click on empty space deselects and closes pickers
   const handleBackgroundClick = useCallback(() => {
     setSelectedId(null);
@@ -609,6 +608,9 @@ function App() {
             <line x1="7.5" y1="4" x2="7.5" y2="16" />
           </svg>
         </button>
+        <div className="titlebar-project-name" data-tauri-drag-region>
+          {activeProject.name}
+        </div>
       </div>
       <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
         <div className="sidebar-project">
@@ -641,14 +643,6 @@ function App() {
         )}
 
         <nav className="sidebar-nav">
-          <button
-            className={selection.type === "all" ? "sidebar-link active" : "sidebar-link"}
-            type="button"
-            onClick={() => startTransition(() => setSelection({ type: "all" }))}
-          >
-            <span>All</span>
-            <span>{activeItems.length}</span>
-          </button>
           <button
             className={
               selection.type === "priorityBoard" ? "sidebar-link active" : "sidebar-link"
@@ -751,29 +745,6 @@ function App() {
       </aside>
 
       <main className="workspace" onClick={(e) => e.stopPropagation()}>
-        <header className="workspace-header">
-          <div>
-            <div className="eyebrow">{activeProject.name}</div>
-            <h1>{pageTitle}</h1>
-          </div>
-          <div className="workspace-actions">
-            <button
-              className="toolbar-button"
-              type="button"
-              onClick={() => {
-                if (sidebarHidden) toggleSidebar();
-                setAddingCategory(true);
-                setCategoryDraft("");
-              }}
-            >
-              New Category
-            </button>
-            <button className="toolbar-button primary" type="button" onClick={() => createNewItem(0)}>
-              New Item
-            </button>
-          </div>
-        </header>
-
         <DndContext
           sensors={sensors}
           collisionDetection={pointerWithin}
@@ -819,6 +790,7 @@ function App() {
                               onChangeCategory={changeCategory}
                               onSetCategoryColor={setCategoryColor}
                               onRenameCategory={renameCategory}
+                              onToggleInProgress={toggleInProgress}
                               onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
                             />
                           ))}
@@ -855,6 +827,7 @@ function App() {
                       onChangeCategory={changeCategory}
                       onSetCategoryColor={setCategoryColor}
                       onRenameCategory={renameCategory}
+                      onToggleInProgress={toggleInProgress}
                       onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
                     />
                   ))}
@@ -935,9 +908,15 @@ function DroppableColumn({
             {label}
           </div>
         )}
-        <button className="count-pill" type="button" onClick={() => onAddItem(bucket)}>
-          {itemCount}
+        <button
+          className="column-add-btn"
+          type="button"
+          onClick={() => onAddItem(bucket)}
+          aria-label="Add item"
+        >
+          +
         </button>
+        <div className="count-pill">{itemCount}</div>
       </div>
       <div className="column-rule" />
       {children}
@@ -964,6 +943,7 @@ type SortableTaskCardProps = {
   onChangeCategory: (itemId: string, category: string) => void;
   onSetCategoryColor: (category: string, color: string) => void;
   onRenameCategory: (oldName: string, newName: string) => void;
+  onToggleInProgress: (itemId: string) => void;
   onCloseCategoryPicker: () => void;
 };
 
@@ -984,6 +964,7 @@ function SortableTaskCard({
   onChangeCategory,
   onSetCategoryColor,
   onRenameCategory,
+  onToggleInProgress,
   onCloseCategoryPicker,
 }: SortableTaskCardProps) {
   const {
@@ -1022,6 +1003,7 @@ function SortableTaskCard({
         onChangeCategory={onChangeCategory}
         onSetCategoryColor={onSetCategoryColor}
         onRenameCategory={onRenameCategory}
+        onToggleInProgress={onToggleInProgress}
         onCloseCategoryPicker={onCloseCategoryPicker}
       />
     </div>
@@ -1047,6 +1029,7 @@ type TaskCardContentProps = {
   onChangeCategory?: (itemId: string, category: string) => void;
   onSetCategoryColor?: (category: string, color: string) => void;
   onRenameCategory?: (oldName: string, newName: string) => void;
+  onToggleInProgress?: (itemId: string) => void;
   onCloseCategoryPicker?: () => void;
 };
 
@@ -1067,6 +1050,7 @@ function TaskCardContent({
   onChangeCategory,
   onSetCategoryColor,
   onRenameCategory,
+  onToggleInProgress,
   onCloseCategoryPicker,
 }: TaskCardContentProps) {
   const color = categoryColor(item.category, categoryColors);
@@ -1094,6 +1078,7 @@ function TaskCardContent({
     isSelected && "selected",
     isDragOverlay && "drag-overlay",
     isBeingDragged && "dragging",
+    item.status === "inProgress" && "in-progress",
   ]
     .filter(Boolean)
     .join(" ");
@@ -1261,6 +1246,18 @@ function TaskCardContent({
           </div>
         )}
       </div>
+
+      {!item.completedAt && onToggleInProgress && (
+        <button
+          className="progress-btn"
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onToggleInProgress(item.id); }}
+          aria-label={item.status === "inProgress" ? "Mark idle" : "Mark in progress"}
+          title={item.status === "inProgress" ? "In progress" : "Mark in progress"}
+        >
+          <span className="progress-dot" />
+        </button>
+      )}
 
       {!item.completedAt && onComplete && (
         <button

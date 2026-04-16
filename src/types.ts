@@ -1,3 +1,5 @@
+export type ItemStatus = "idle" | "inProgress";
+
 export type GardenItem = {
   id: string;
   title: string;
@@ -7,6 +9,7 @@ export type GardenItem = {
   priorityBucket: number;
   createdAt: string;
   completedAt: string | null;
+  status: ItemStatus;
 };
 
 export type GardenProject = {

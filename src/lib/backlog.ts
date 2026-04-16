@@ -1,4 +1,4 @@
-import type { GardenItem, GardenProject } from "../types";
+import type { GardenItem, GardenProject, ItemStatus } from "../types";
 
 export const colorPalette = [
   "#C86040",
@@ -79,6 +79,7 @@ export function normalizeProject(raw: Record<string, unknown>): GardenProject {
           priorityBucket: (item.priorityBucket as number) ?? 0,
           createdAt: (item.createdAt as string) ?? new Date().toISOString(),
           completedAt: (item.completedAt as string | null) ?? null,
+          status: (item.status as ItemStatus) === "inProgress" ? "inProgress" : "idle",
         }),
       )
     : [];
