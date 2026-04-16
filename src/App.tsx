@@ -1,7 +1,27 @@
-import { startTransition, useEffect, useRef, useState } from "react";
-import type { DragEvent, FormEvent, KeyboardEvent } from "react";
+import { startTransition, useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import type { FormEvent, KeyboardEvent } from "react";
 import {
+  DndContext,
+  DragOverlay,
+  pointerWithin,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import type { DragStartEvent, DragOverEvent, DragEndEvent } from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { useDroppable } from "@dnd-kit/core";
+import {
+  bucketLabel,
   categoryColor,
+  colorPalette,
   createProject,
   getActiveItems,
   getActiveProject,
@@ -26,9 +46,34 @@ function App() {
   const [loaded, setLoaded] = useState(false);
   const [selection, setSelection] = useState<SidebarSelection>({ type: "priorityBoard" });
   const [editing, setEditing] = useState<EditingState | null>(null);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dropBucket, setDropBucket] = useState<number | null>(null);
-  const [dropItemId, setDropItemId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [categoryPickerItemId, setCategoryPickerItemId] = useState<string | null>(null);
+  const [sidebarHidden, setSidebarHidden] = useState<boolean>(
+    () => localStorage.getItem("garden-sidebar-hidden") === "1",
+  );
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [categoryDraft, setCategoryDraft] = useState("");
+  const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [addingProject, setAddingProject] = useState(false);
+  const [projectDraft, setProjectDraft] = useState("");
+  const undoStackRef = useRef<GardenProject[]>([]);
+  const dragStartBucketRef = useRef<number | null>(null);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarHidden((prev) => {
+      const next = !prev;
+      localStorage.setItem("garden-sidebar-hidden", next ? "1" : "0");
+      return next;
+    });
+  }, []);
+
+  // dnd-kit sensor: require 5px of movement before starting a drag
+  // so clicks/double-clicks don't accidentally trigger drags
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
 
   // Load from disk on mount
   useEffect(() => {
@@ -50,14 +95,12 @@ function App() {
     const prev = prevBacklogRef.current;
     prevBacklogRef.current = backlog;
 
-    // Save active project id if it changed
     if (backlog.activeProjectId && backlog.activeProjectId !== prev.activeProjectId) {
       saveActiveProjectId(backlog.activeProjectId).catch((err) =>
         console.error("Failed to save active project ID:", err),
       );
     }
 
-    // Save any project whose data changed
     const currentActive = backlog.projects.find((p) => p.id === backlog.activeProjectId);
     const prevActive = prev.projects.find((p) => p.id === prev.activeProjectId);
     if (currentActive && currentActive !== prevActive) {
@@ -66,6 +109,63 @@ function App() {
       );
     }
   }, [backlog, loaded]);
+
+  // Restore persisted zoom on mount
+  useEffect(() => {
+    const saved = Number.parseFloat(localStorage.getItem("garden-zoom") ?? "");
+    if (Number.isFinite(saved) && saved > 0) {
+      (document.body.style as unknown as Record<string, string>).zoom = String(saved);
+    }
+  }, []);
+
+  // Global keyboard handler for delete + undo + zoom
+  useEffect(() => {
+    function handleKeyDown(event: globalThis.KeyboardEvent) {
+      // Cmd+Z / Ctrl+Z to undo (works even while editing)
+      if ((event.metaKey || event.ctrlKey) && event.key === "z") {
+        event.preventDefault();
+        undo();
+        return;
+      }
+
+      // Cmd+B / Ctrl+B to toggle sidebar
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        toggleSidebar();
+        return;
+      }
+
+      // Cmd+=/Cmd+-/Cmd+0 to zoom the webview
+      if (event.metaKey || event.ctrlKey) {
+        const isZoomIn = event.key === "=" || event.key === "+";
+        const isZoomOut = event.key === "-" || event.key === "_";
+        const isZoomReset = event.key === "0";
+        if (isZoomIn || isZoomOut || isZoomReset) {
+          event.preventDefault();
+          const style = document.body.style as unknown as Record<string, string>;
+          const current = Number.parseFloat(style.zoom || "1") || 1;
+          const next = isZoomReset
+            ? 1
+            : isZoomIn
+              ? Math.min(3, Math.round((current + 0.1) * 100) / 100)
+              : Math.max(0.5, Math.round((current - 0.1) * 100) / 100);
+          style.zoom = String(next);
+          localStorage.setItem("garden-zoom", String(next));
+          return;
+        }
+      }
+
+      if (editing) return; // don't delete while editing
+      if (!selectedId) return;
+      if (event.key === "Backspace" || event.key === "Delete") {
+        event.preventDefault();
+        deleteItem(selectedId);
+        setSelectedId(null);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedId, editing]);
 
   const hasData = loaded && backlog.projects.length > 0;
   const activeProject = hasData ? getActiveProject(backlog) : null;
@@ -76,25 +176,50 @@ function App() {
     updater: (project: GardenProject) => GardenProject,
     nextSelection?: SidebarSelection,
   ) {
-    setBacklog((current) => ({
-      ...current,
-      projects: current.projects.map((project) =>
-        project.id === current.activeProjectId ? updater(project) : project,
-      ),
-    }));
+    setBacklog((current) => {
+      // Push current project snapshot onto undo stack before mutating
+      const currentProject = current.projects.find((p) => p.id === current.activeProjectId);
+      if (currentProject) {
+        undoStackRef.current = [...undoStackRef.current.slice(-49), currentProject];
+      }
+
+      return {
+        ...current,
+        projects: current.projects.map((project) =>
+          project.id === current.activeProjectId ? updater(project) : project,
+        ),
+      };
+    });
 
     if (nextSelection) {
       startTransition(() => setSelection(nextSelection));
     }
   }
 
-  function addProject() {
-    const name = window.prompt("New project name");
-    if (!name?.trim()) {
-      return;
-    }
+  function undo() {
+    const stack = undoStackRef.current;
+    if (stack.length === 0) return;
 
-    const project = createProject(name.trim());
+    const previous = stack[stack.length - 1];
+    undoStackRef.current = stack.slice(0, -1);
+
+    setBacklog((current) => ({
+      ...current,
+      projects: current.projects.map((project) =>
+        project.id === previous.id ? previous : project,
+      ),
+    }));
+    setEditing(null);
+    setSelectedId(null);
+  }
+
+  function commitNewProject() {
+    const trimmed = projectDraft.trim();
+    setAddingProject(false);
+    setProjectDraft("");
+    if (!trimmed) return;
+
+    const project = createProject(trimmed);
     saveProject(project);
     saveActiveProjectId(project.id);
     setBacklog((current) => ({
@@ -108,19 +233,18 @@ function App() {
     setBacklog((current) => ({ ...current, activeProjectId: projectId }));
     startTransition(() => setSelection({ type: "priorityBoard" }));
     setEditing(null);
+    setSelectedId(null);
   }
 
-  function addCategory() {
-    const name = window.prompt("New category name");
-    if (!name?.trim()) {
-      return;
-    }
+  function commitNewCategory() {
+    const trimmed = categoryDraft.trim();
+    setAddingCategory(false);
+    setCategoryDraft("");
+    if (!trimmed) return;
 
     mutateActiveProject((project) => {
-      if (project.categories.includes(name.trim())) {
-        return project;
-      }
-      return { ...project, categories: [...project.categories, name.trim()] };
+      if (project.categories.includes(trimmed)) return project;
+      return { ...project, categories: [...project.categories, trimmed] };
     });
   }
 
@@ -148,11 +272,7 @@ function App() {
           completedAt: null,
         };
 
-        return {
-          ...project,
-          categories,
-          items: [...project.items, item],
-        };
+        return { ...project, categories, items: [...project.items, item] };
       },
       category === "Uncategorized" ? { type: "priorityBoard" } : { type: "category", category },
     );
@@ -167,17 +287,84 @@ function App() {
     }));
   }
 
+  function completeItem(itemId: string) {
+    updateItem(itemId, (item) => ({ ...item, completedAt: new Date().toISOString() }));
+    setSelectedId(null);
+  }
+
   function deleteItem(itemId: string) {
     mutateActiveProject((project) => ({
       ...project,
       items: project.items.filter((item) => item.id !== itemId),
     }));
-
     setEditing((current) => (current?.id === itemId ? null : current));
   }
 
-  function completeItem(itemId: string) {
-    updateItem(itemId, (item) => ({ ...item, completedAt: new Date().toISOString() }));
+  function renameCategory(oldName: string, newName: string) {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === oldName) return;
+
+    mutateActiveProject((project) => {
+      // If target name already exists, merge (items + keep existing color)
+      const merging = project.categories.includes(trimmed);
+      const categories = merging
+        ? project.categories.filter((c) => c !== oldName)
+        : project.categories.map((c) => (c === oldName ? trimmed : c));
+
+      const categoryColors = { ...project.categoryColors };
+      if (!merging && categoryColors[oldName]) {
+        categoryColors[trimmed] = categoryColors[oldName];
+      }
+      delete categoryColors[oldName];
+
+      return {
+        ...project,
+        categories,
+        categoryColors,
+        items: project.items.map((item) =>
+          item.category === oldName ? { ...item, category: trimmed } : item,
+        ),
+      };
+    });
+
+    setSelection((current) =>
+      current.type === "category" && current.category === oldName
+        ? { type: "category", category: trimmed }
+        : current,
+    );
+  }
+
+  function changeCategory(itemId: string, category: string) {
+    mutateActiveProject((project) => {
+      const categories = project.categories.includes(category)
+        ? project.categories
+        : [...project.categories, category];
+      return {
+        ...project,
+        categories,
+        items: project.items.map((item) =>
+          item.id === itemId ? { ...item, category } : item,
+        ),
+      };
+    });
+    setCategoryPickerItemId(null);
+  }
+
+  function renameBucket(bucket: number, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    mutateActiveProject((project) => {
+      const next = [...project.bucketNames];
+      next[bucket] = trimmed;
+      return { ...project, bucketNames: next };
+    });
+  }
+
+  function setCategoryColor(category: string, color: string) {
+    mutateActiveProject((project) => ({
+      ...project,
+      categoryColors: { ...project.categoryColors, [category]: color },
+    }));
   }
 
   function moveItemToBucket(itemId: string, targetBucket: number) {
@@ -207,9 +394,7 @@ function App() {
     mutateActiveProject((project) => {
       const sourceItem = project.items.find((item) => item.id === draggedId);
       const targetItem = project.items.find((item) => item.id === targetId);
-      if (!sourceItem || !targetItem) {
-        return project;
-      }
+      if (!sourceItem || !targetItem) return project;
 
       const remaining = project.items.filter((item) => item.id !== draggedId);
       const targetIndex = remaining.findIndex((item) => item.id === targetId);
@@ -222,10 +407,59 @@ function App() {
 
       const activeByBucket = new Map<number, number>();
       for (let index = 0; index < remaining.length; index += 1) {
-        if (remaining[index].completedAt !== null) {
-          continue;
-        }
+        if (remaining[index].completedAt !== null) continue;
+        const bucket = remaining[index].priorityBucket;
+        const nextPriority = activeByBucket.get(bucket) ?? 0;
+        remaining[index] = { ...remaining[index], priority: nextPriority };
+        activeByBucket.set(bucket, nextPriority + 1);
+      }
 
+      return { ...project, items: remaining };
+    });
+  }
+
+  function reorderWithinBucket(draggedId: string, overId: string) {
+    mutateActiveProject((project) => {
+      const dragged = project.items.find((i) => i.id === draggedId);
+      const over = project.items.find((i) => i.id === overId);
+      if (!dragged || !over || dragged.priorityBucket !== over.priorityBucket) return project;
+
+      const bucket = dragged.priorityBucket;
+      const bucketItems = project.items
+        .filter((i) => i.priorityBucket === bucket && i.completedAt === null)
+        .sort((a, b) => a.priority - b.priority);
+
+      const oldIndex = bucketItems.findIndex((i) => i.id === draggedId);
+      const newIndex = bucketItems.findIndex((i) => i.id === overId);
+      if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return project;
+
+      const reordered = arrayMove(bucketItems, oldIndex, newIndex);
+      const priorityMap = new Map<string, number>();
+      reordered.forEach((item, idx) => priorityMap.set(item.id, idx));
+
+      return {
+        ...project,
+        items: project.items.map((item) =>
+          priorityMap.has(item.id)
+            ? { ...item, priority: priorityMap.get(item.id)! }
+            : item,
+        ),
+      };
+    });
+  }
+
+  function moveItemAfterLast(draggedId: string, targetBucket: number) {
+    mutateActiveProject((project) => {
+      const sourceItem = project.items.find((item) => item.id === draggedId);
+      if (!sourceItem) return project;
+
+      const remaining = project.items.filter((item) => item.id !== draggedId);
+      const insertedItem: GardenItem = { ...sourceItem, priorityBucket: targetBucket };
+      remaining.push(insertedItem);
+
+      const activeByBucket = new Map<number, number>();
+      for (let index = 0; index < remaining.length; index += 1) {
+        if (remaining[index].completedAt !== null) continue;
         const bucket = remaining[index].priorityBucket;
         const nextPriority = activeByBucket.get(bucket) ?? 0;
         remaining[index] = { ...remaining[index], priority: nextPriority };
@@ -238,9 +472,7 @@ function App() {
 
   function commitEdit(itemId: string) {
     const current = editing;
-    if (!current || current.id !== itemId) {
-      return;
-    }
+    if (!current || current.id !== itemId) return;
 
     const trimmed = current.draft.trim();
     if (!trimmed) {
@@ -266,6 +498,83 @@ function App() {
     }
   }
 
+  // --- dnd-kit handlers ---
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    const activeId = String(event.active.id);
+    setActiveDragId(activeId);
+    const item = activeProject?.items.find((i) => i.id === activeId);
+    dragStartBucketRef.current = item?.priorityBucket ?? null;
+  }, [activeProject]);
+
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over || !activeProject) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const activeItem = activeProject.items.find((item) => item.id === activeId);
+    if (!activeItem) return;
+
+    // Determine target bucket from the over element.
+    let targetBucket: number;
+    if (overId.startsWith("column-")) {
+      targetBucket = Number.parseInt(overId.split("-")[1], 10);
+    } else {
+      const overItem = activeProject.items.find((item) => item.id === overId);
+      if (!overItem) return;
+      targetBucket = overItem.priorityBucket;
+    }
+
+    // Same bucket → don't mutate during drag; onDragEnd commits final order.
+    if (targetBucket === activeItem.priorityBucket) return;
+
+    // Cross-bucket: move into target bucket near the hovered card (or append).
+    if (overId.startsWith("column-")) {
+      moveItemToBucket(activeId, targetBucket);
+    } else {
+      moveItemBefore(activeId, overId);
+    }
+  }, [activeProject]);
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+    const startBucket = dragStartBucketRef.current;
+    dragStartBucketRef.current = null;
+
+    if (!over || !activeProject) return;
+
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    if (activeId === overId) return;
+
+    const activeItem = activeProject.items.find((item) => item.id === activeId);
+    if (!activeItem) return;
+
+    // Dropped on an empty column — send to end of that bucket.
+    if (overId.startsWith("column-")) {
+      const bucket = Number.parseInt(overId.split("-")[1], 10);
+      moveItemAfterLast(activeId, bucket);
+      return;
+    }
+
+    const overItem = activeProject.items.find((item) => item.id === overId);
+    if (!overItem) return;
+
+    // Same-bucket drag (never left origin bucket) → arrayMove reorder.
+    if (startBucket === overItem.priorityBucket && activeItem.priorityBucket === overItem.priorityBucket) {
+      reorderWithinBucket(activeId, overId);
+      return;
+    }
+
+    // Cross-bucket drop: onDragOver already positioned active.
+    // No-op here (current state is final).
+  }, [activeProject]);
+
+  // Find the actively dragged item for the overlay
+  const activeDragItem = activeProject?.items.find((item) => item.id === activeDragId) ?? null;
+
   const pageTitle =
     selection.type === "priorityBoard"
       ? "Priority"
@@ -275,30 +584,61 @@ function App() {
           ? "Completed"
           : selection.category;
 
+  // Click on empty space deselects and closes pickers
+  const handleBackgroundClick = useCallback(() => {
+    setSelectedId(null);
+    setCategoryPickerItemId(null);
+  }, []);
+
   if (!loaded || !activeProject) {
     return <div className="app-shell"><div className="titlebar" data-tauri-drag-region /></div>;
   }
 
   return (
-    <div className="app-shell">
-      <div className="titlebar" data-tauri-drag-region />
-      <aside className="sidebar">
+    <div className={sidebarHidden ? "app-shell sidebar-hidden" : "app-shell"} onClick={handleBackgroundClick}>
+      <div className="titlebar" data-tauri-drag-region>
+        <button
+          className="sidebar-toggle"
+          type="button"
+          onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
+          aria-label={sidebarHidden ? "Show sidebar" : "Hide sidebar"}
+          title={sidebarHidden ? "Show sidebar (⌘B)" : "Hide sidebar (⌘B)"}
+        >
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+            <rect x="2.5" y="4" width="15" height="12" rx="2.5" />
+            <line x1="7.5" y1="4" x2="7.5" y2="16" />
+          </svg>
+        </button>
+      </div>
+      <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
         <div className="sidebar-project">
-          <select
-            className="project-select"
-            value={activeProject.id}
-            onChange={(event) => switchProject(event.target.value)}
+          <ProjectSelect
+            projects={backlog.projects}
+            activeId={activeProject.id}
+            onSelect={switchProject}
+          />
+          <button
+            className="ghost-icon"
+            type="button"
+            onClick={() => { setAddingProject(true); setProjectDraft(""); }}
           >
-            {backlog.projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          <button className="ghost-icon" type="button" onClick={addProject}>
             +
           </button>
         </div>
+        {addingProject && (
+          <input
+            autoFocus
+            className="inline-add-input"
+            value={projectDraft}
+            placeholder="Project name"
+            onChange={(e) => setProjectDraft(e.target.value)}
+            onBlur={commitNewProject}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commitNewProject();
+              else if (e.key === "Escape") { setAddingProject(false); setProjectDraft(""); }
+            }}
+          />
+        )}
 
         <nav className="sidebar-nav">
           <button
@@ -323,26 +663,80 @@ function App() {
           <div className="sidebar-section">
             <div className="sidebar-section-head">
               <span>Categories</span>
-              <button className="ghost-icon" type="button" onClick={addCategory}>
+              <button
+                className="ghost-icon"
+                type="button"
+                onClick={() => { setAddingCategory(true); setCategoryDraft(""); }}
+              >
                 +
               </button>
             </div>
 
-            {activeProject.categories.map((category) => (
-              <button
-                key={category}
-                className={
-                  selection.type === "category" && selection.category === category
-                    ? "sidebar-link active"
-                    : "sidebar-link"
-                }
-                type="button"
-                onClick={() => startTransition(() => setSelection({ type: "category", category }))}
-              >
-                <span>{category}</span>
-                <span>{getItemsInCategory(activeProject, category).length}</span>
-              </button>
-            ))}
+            {addingCategory && (
+              <input
+                autoFocus
+                className="inline-add-input"
+                value={categoryDraft}
+                placeholder="Category name"
+                onChange={(e) => setCategoryDraft(e.target.value)}
+                onBlur={commitNewCategory}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitNewCategory();
+                  else if (e.key === "Escape") { setAddingCategory(false); setCategoryDraft(""); }
+                }}
+              />
+            )}
+
+            {activeProject.categories.map((category) => {
+              const isRenaming = renamingCategory === category;
+              const commitRename = () => {
+                const trimmed = renameDraft.trim();
+                setRenamingCategory(null);
+                setRenameDraft("");
+                if (trimmed && trimmed !== category) renameCategory(category, trimmed);
+              };
+
+              if (isRenaming) {
+                return (
+                  <input
+                    key={category}
+                    autoFocus
+                    className="inline-add-input"
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") commitRename();
+                      else if (e.key === "Escape") { setRenamingCategory(null); setRenameDraft(""); }
+                    }}
+                  />
+                );
+              }
+
+              return (
+                <button
+                  key={category}
+                  className={
+                    selection.type === "category" && selection.category === category
+                      ? "sidebar-link active"
+                      : "sidebar-link"
+                  }
+                  type="button"
+                  onClick={() => startTransition(() => setSelection({ type: "category", category }))}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setRenamingCategory(category);
+                    setRenameDraft(category);
+                  }}
+                >
+                  <span className="sidebar-category-label">
+                    <span className="category-dot" style={{ background: categoryColor(category, activeProject.categoryColors) }} />
+                    {category}
+                  </span>
+                  <span>{getItemsInCategory(activeProject, category).length}</span>
+                </button>
+              );
+            })}
           </div>
 
           <button
@@ -356,14 +750,22 @@ function App() {
         </nav>
       </aside>
 
-      <main className="workspace">
+      <main className="workspace" onClick={(e) => e.stopPropagation()}>
         <header className="workspace-header">
           <div>
             <div className="eyebrow">{activeProject.name}</div>
             <h1>{pageTitle}</h1>
           </div>
           <div className="workspace-actions">
-            <button className="toolbar-button" type="button" onClick={addCategory}>
+            <button
+              className="toolbar-button"
+              type="button"
+              onClick={() => {
+                if (sidebarHidden) toggleSidebar();
+                setAddingCategory(true);
+                setCategoryDraft("");
+              }}
+            >
               New Category
             </button>
             <button className="toolbar-button primary" type="button" onClick={() => createNewItem(0)}>
@@ -372,179 +774,383 @@ function App() {
           </div>
         </header>
 
-        {selection.type === "priorityBoard" ? (
-          <section className="board-shell">
-            <div className="board">
-              {Array.from({ length: activeProject.priorityBucketCount }, (_, bucket) => (
-                <div
-                  key={bucket}
-                  className={dropBucket === bucket ? "column drop-active" : "column"}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                    setDropBucket(bucket);
-                    setDropItemId(null);
-                  }}
-                  onDragLeave={() => setDropBucket((current) => (current === bucket ? null : current))}
-                  onDrop={() => {
-                    if (draggingId) {
-                      moveItemToBucket(draggingId, bucket);
-                    }
-                    setDropBucket(null);
-                    setDraggingId(null);
-                  }}
-                >
-                  <div className="column-head">
-                    <div className="column-title">P{bucket + 1}</div>
-                    <button className="count-pill" type="button" onClick={() => createNewItem(bucket)}>
-                      {getItemsInBucket(activeProject, bucket).length}
-                    </button>
-                  </div>
-                  <div className="column-rule" />
-                  <div className="stack">
-                    {getItemsInBucket(activeProject, bucket).map((item) => (
-                      <TaskCard
-                        key={item.id}
-                        item={item}
-                        editing={editing}
-                        maxBucket={activeProject.priorityBucketCount - 1}
-                        onEditChange={setEditing}
-                        onCommitEdit={commitEdit}
-                        onDelete={deleteItem}
-                        onComplete={completeItem}
-                        onMoveBucket={moveItemToBucket}
-                        isDropTarget={dropItemId === item.id}
-                        onDragStart={(event) => {
-                          event.dataTransfer.effectAllowed = "move";
-                          setDraggingId(item.id);
-                        }}
-                        onDragEnd={() => {
-                          setDraggingId(null);
-                          setDropBucket(null);
-                          setDropItemId(null);
-                        }}
-                        onDragOver={(event) => {
-                          event.preventDefault();
-                          setDropItemId(item.id);
-                          setDropBucket(null);
-                        }}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          if (draggingId && draggingId !== item.id) {
-                            moveItemBefore(draggingId, item.id);
-                          }
-                          setDropItemId(null);
-                          setDraggingId(null);
-                        }}
-                      />
-                    ))}
-                  </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          {selection.type === "priorityBoard" ? (
+            <section className="board-shell">
+              <div className="board">
+                {Array.from({ length: activeProject.priorityBucketCount }, (_, bucket) => {
+                  const bucketItems = getItemsInBucket(activeProject, bucket);
+                  return (
+                    <DroppableColumn
+                      key={bucket}
+                      bucket={bucket}
+                      label={bucketLabel(activeProject, bucket)}
+                      itemCount={bucketItems.length}
+                      onAddItem={createNewItem}
+                      onRename={renameBucket}
+                    >
+                      <SortableContext
+                        items={bucketItems.map((item) => item.id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        <div className="stack" onDoubleClick={() => createNewItem(bucket)}>
+                          {bucketItems.map((item) => (
+                            <SortableTaskCard
+                              key={item.id}
+                              item={item}
+                              editing={editing}
+                              categories={activeProject.categories}
+                              categoryColors={activeProject.categoryColors}
+                              categoryPickerItemId={categoryPickerItemId}
+                              isSelected={selectedId === item.id}
+                              isDragOverlay={false}
+                              isBeingDragged={activeDragId === item.id}
+                              onSelect={(id) => setSelectedId(id)}
+                              onEditChange={setEditing}
+                              onCommitEdit={commitEdit}
+                              onComplete={completeItem}
+                              onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
+                              onChangeCategory={changeCategory}
+                              onSetCategoryColor={setCategoryColor}
+                              onRenameCategory={renameCategory}
+                              onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DroppableColumn>
+                  );
+                })}
+              </div>
+            </section>
+          ) : (
+            <section className="list-shell">
+              <SortableContext
+                items={visibleItems().map((item) => item.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="list-grid">
+                  {visibleItems().map((item) => (
+                    <SortableTaskCard
+                      key={item.id}
+                      item={item}
+                      editing={editing}
+                      categories={activeProject.categories}
+                      categoryColors={activeProject.categoryColors}
+                      categoryPickerItemId={categoryPickerItemId}
+                      isSelected={selectedId === item.id}
+                      isDragOverlay={false}
+                      isBeingDragged={activeDragId === item.id}
+                      onSelect={(id) => setSelectedId(id)}
+                      onEditChange={setEditing}
+                      onCommitEdit={commitEdit}
+                      onComplete={completeItem}
+                      onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
+                      onChangeCategory={changeCategory}
+                      onSetCategoryColor={setCategoryColor}
+                      onRenameCategory={renameCategory}
+                      onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-          </section>
-        ) : (
-          <section className="list-shell">
-            <div className="list-grid">
-              {visibleItems().map((item) => (
-                <TaskCard
-                  key={item.id}
-                  item={item}
-                  editing={editing}
-                  maxBucket={activeProject.priorityBucketCount - 1}
-                  onEditChange={setEditing}
-                  onCommitEdit={commitEdit}
-                  onDelete={deleteItem}
-                  onComplete={completeItem}
-                  onMoveBucket={moveItemToBucket}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+              </SortableContext>
+            </section>
+          )}
+
+          <DragOverlay dropAnimation={{ duration: 200, easing: "ease" }}>
+            {activeDragItem ? (
+              <TaskCardContent
+                item={activeDragItem}
+                editing={null}
+                categoryColors={activeProject.categoryColors}
+                isSelected={false}
+                isDragOverlay={true}
+                isBeingDragged={false}
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       </main>
     </div>
   );
 }
 
-type TaskCardProps = {
+// --- Droppable column wrapper ---
+
+function DroppableColumn({
+  bucket,
+  label,
+  itemCount,
+  onAddItem,
+  onRename,
+  children,
+}: {
+  bucket: number;
+  label: string;
+  itemCount: number;
+  onAddItem: (bucket: number) => void;
+  onRename: (bucket: number, name: string) => void;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `column-${bucket}` });
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(label);
+
+  function commit() {
+    setIsEditing(false);
+    const trimmed = draft.trim();
+    if (trimmed && trimmed !== label) onRename(bucket, trimmed);
+    else setDraft(label);
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={isOver ? "column drop-active" : "column"}
+    >
+      <div className="column-head">
+        {isEditing ? (
+          <input
+            autoFocus
+            className="column-title-input"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") commit();
+              else if (e.key === "Escape") { setDraft(label); setIsEditing(false); }
+            }}
+          />
+        ) : (
+          <div
+            className="column-title"
+            onDoubleClick={(e) => { e.stopPropagation(); setDraft(label); setIsEditing(true); }}
+          >
+            {label}
+          </div>
+        )}
+        <button className="count-pill" type="button" onClick={() => onAddItem(bucket)}>
+          {itemCount}
+        </button>
+      </div>
+      <div className="column-rule" />
+      {children}
+    </div>
+  );
+}
+
+// --- Sortable card wrapper ---
+
+type SortableTaskCardProps = {
   item: GardenItem;
   editing: EditingState | null;
-  maxBucket: number;
+  categories: string[];
+  categoryColors: Record<string, string>;
+  categoryPickerItemId: string | null;
+  isSelected: boolean;
+  isDragOverlay: boolean;
+  isBeingDragged: boolean;
+  onSelect: (id: string) => void;
   onEditChange: (editing: EditingState | null) => void;
   onCommitEdit: (itemId: string) => void;
-  onDelete: (itemId: string) => void;
   onComplete: (itemId: string) => void;
-  onMoveBucket: (itemId: string, bucket: number) => void;
-  isDropTarget?: boolean;
-  onDragStart?: (event: DragEvent<HTMLElement>) => void;
-  onDragEnd?: () => void;
-  onDragOver?: (event: DragEvent<HTMLElement>) => void;
-  onDrop?: (event: DragEvent<HTMLElement>) => void;
+  onCategoryClick: (itemId: string) => void;
+  onChangeCategory: (itemId: string, category: string) => void;
+  onSetCategoryColor: (category: string, color: string) => void;
+  onRenameCategory: (oldName: string, newName: string) => void;
+  onCloseCategoryPicker: () => void;
 };
 
-function TaskCard({
+function SortableTaskCard({
   item,
   editing,
-  maxBucket,
+  categories,
+  categoryColors,
+  categoryPickerItemId,
+  isSelected,
+  isDragOverlay,
+  isBeingDragged,
+  onSelect,
   onEditChange,
   onCommitEdit,
-  onDelete,
   onComplete,
-  onMoveBucket,
-  isDropTarget = false,
-  onDragStart,
-  onDragEnd,
-  onDragOver,
-  onDrop,
-}: TaskCardProps) {
-  const color = categoryColor(item.category);
+  onCategoryClick,
+  onChangeCategory,
+  onSetCategoryColor,
+  onRenameCategory,
+  onCloseCategoryPicker,
+}: SortableTaskCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const showPicker = categoryPickerItemId === item.id;
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    position: "relative",
+    zIndex: showPicker ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <TaskCardContent
+        item={item}
+        editing={editing}
+        categories={categories}
+        categoryColors={categoryColors}
+        showCategoryPicker={categoryPickerItemId === item.id}
+        isSelected={isSelected}
+        isDragOverlay={isDragOverlay}
+        isBeingDragged={isDragging || isBeingDragged}
+        onSelect={onSelect}
+        onEditChange={onEditChange}
+        onCommitEdit={onCommitEdit}
+        onComplete={onComplete}
+        onCategoryClick={onCategoryClick}
+        onChangeCategory={onChangeCategory}
+        onSetCategoryColor={onSetCategoryColor}
+        onRenameCategory={onRenameCategory}
+        onCloseCategoryPicker={onCloseCategoryPicker}
+      />
+    </div>
+  );
+}
+
+// --- Card presentation ---
+
+type TaskCardContentProps = {
+  item: GardenItem;
+  editing: EditingState | null;
+  categories?: string[];
+  categoryColors?: Record<string, string>;
+  showCategoryPicker?: boolean;
+  isSelected: boolean;
+  isDragOverlay: boolean;
+  isBeingDragged: boolean;
+  onSelect?: (id: string) => void;
+  onEditChange?: (editing: EditingState | null) => void;
+  onCommitEdit?: (itemId: string) => void;
+  onComplete?: (itemId: string) => void;
+  onCategoryClick?: (itemId: string) => void;
+  onChangeCategory?: (itemId: string, category: string) => void;
+  onSetCategoryColor?: (category: string, color: string) => void;
+  onRenameCategory?: (oldName: string, newName: string) => void;
+  onCloseCategoryPicker?: () => void;
+};
+
+function TaskCardContent({
+  item,
+  editing,
+  categories = [],
+  categoryColors = {},
+  showCategoryPicker = false,
+  isSelected,
+  isDragOverlay,
+  isBeingDragged,
+  onSelect,
+  onEditChange,
+  onCommitEdit,
+  onComplete,
+  onCategoryClick,
+  onChangeCategory,
+  onSetCategoryColor,
+  onRenameCategory,
+  onCloseCategoryPicker,
+}: TaskCardContentProps) {
+  const color = categoryColor(item.category, categoryColors);
+  const [editingColorFor, setEditingColorFor] = useState<string | null>(null);
+  const [pickerNewCatDraft, setPickerNewCatDraft] = useState<string | null>(null);
+  const [renamingCatInPicker, setRenamingCatInPicker] = useState<string | null>(null);
+  const [renameCatDraft, setRenameCatDraft] = useState("");
   const isEditing = editing?.id === item.id;
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Click outside closes category picker
+  useEffect(() => {
+    if (!showCategoryPicker) return;
+    function handleOutsideClick(event: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(event.target as Node)) {
+        onCloseCategoryPicker?.();
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, [showCategoryPicker, onCloseCategoryPicker]);
+
+  const classNames = [
+    "task-card",
+    isSelected && "selected",
+    isDragOverlay && "drag-overlay",
+    isBeingDragged && "dragging",
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   function submitEdit(event: FormEvent) {
     event.preventDefault();
-    onCommitEdit(item.id);
+    onCommitEdit?.(item.id);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
-      onCommitEdit(item.id);
+      onCommitEdit?.(item.id);
     }
+  }
+
+  function handleClick(event: React.MouseEvent) {
+    event.stopPropagation();
+    if (!isEditing) {
+      onSelect?.(item.id);
+    }
+  }
+
+  function handleDoubleClick(event: React.MouseEvent) {
+    event.stopPropagation();
+    onEditChange?.({ id: item.id, draft: item.title });
+  }
+
+  function handleCategoryClick(event: React.MouseEvent) {
+    event.stopPropagation();
+    onCategoryClick?.(item.id);
+  }
+
+  function handlePickCategory(category: string) {
+    onChangeCategory?.(item.id, category);
+  }
+
+  function commitPickerNewCategory() {
+    const trimmed = (pickerNewCatDraft ?? "").trim();
+    setPickerNewCatDraft(null);
+    if (trimmed) onChangeCategory?.(item.id, trimmed);
   }
 
   return (
     <article
-      className={isDropTarget ? "task-card drop-target" : "task-card"}
+      className={classNames}
       style={{ ["--card-accent" as string]: color }}
-      draggable
-      onDragStart={onDragStart}
-      onDragEnd={onDragEnd}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDoubleClick={() => onEditChange({ id: item.id, draft: item.title })}
+      onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
     >
-      <div className="task-card-actions">
-        <button className="ghost-icon" type="button" onClick={() => onMoveBucket(item.id, Math.max(0, item.priorityBucket - 1))}>
-          ←
-        </button>
-        <button className="ghost-icon" type="button" onClick={() => onMoveBucket(item.id, Math.min(maxBucket, item.priorityBucket + 1))}>
-          →
-        </button>
-        <button className="ghost-icon" type="button" onClick={() => onComplete(item.id)}>
-          ✓
-        </button>
-        <button className="ghost-icon" type="button" onClick={() => onDelete(item.id)}>
-          ×
-        </button>
-      </div>
-
       {isEditing ? (
         <form onSubmit={submitEdit}>
           <input
             autoFocus
             className="task-input"
             value={editing.draft}
-            onChange={(event) => onEditChange({ id: item.id, draft: event.target.value })}
-            onBlur={() => onCommitEdit(item.id)}
+            onChange={(event) => onEditChange?.({ id: item.id, draft: event.target.value })}
+            onBlur={() => onCommitEdit?.(item.id)}
             onKeyDown={handleKeyDown}
             placeholder="New item..."
           />
@@ -553,10 +1159,255 @@ function TaskCard({
         <h2 className="task-title">{item.title || "Untitled task"}</h2>
       )}
 
-      <div className="task-meta">
-        {item.category}
+      <div className="task-meta-wrapper" ref={pickerRef}>
+        <button
+          className="task-meta"
+          type="button"
+          onClick={handleCategoryClick}
+        >
+          {item.category}
+        </button>
+        {showCategoryPicker && (
+          <div className="category-picker">
+            {categories.map((cat) => {
+              const isRenamingRow = renamingCatInPicker === cat;
+              const commitRow = () => {
+                const trimmed = renameCatDraft.trim();
+                setRenamingCatInPicker(null);
+                setRenameCatDraft("");
+                if (trimmed && trimmed !== cat) onRenameCategory?.(cat, trimmed);
+              };
+
+              return (
+                <div key={cat} className="category-option-row">
+                  {isRenamingRow ? (
+                    <input
+                      autoFocus
+                      className="inline-add-input category-rename-input"
+                      value={renameCatDraft}
+                      onChange={(e) => setRenameCatDraft(e.target.value)}
+                      onBlur={commitRow}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter") commitRow();
+                        else if (e.key === "Escape") { setRenamingCatInPicker(null); setRenameCatDraft(""); }
+                      }}
+                    />
+                  ) : (
+                    <button
+                      className={cat === item.category ? "category-option active" : "category-option"}
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handlePickCategory(cat); }}
+                    >
+                      <span className="category-dot" style={{ background: categoryColor(cat, categoryColors) }} />
+                      {cat}
+                    </button>
+                  )}
+                  <button
+                    className="category-rename-btn"
+                    type="button"
+                    aria-label={`Rename ${cat}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setRenamingCatInPicker(cat);
+                      setRenameCatDraft(cat);
+                    }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.3">
+                      <path d="M8 1.5L10.5 4L4 10.5L1.5 10.5L1.5 8L8 1.5Z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </button>
+                  <ColorEditButton
+                    category={cat}
+                    currentColor={categoryColor(cat, categoryColors)}
+                    isOpen={editingColorFor === cat}
+                    onToggle={() => setEditingColorFor(editingColorFor === cat ? null : cat)}
+                    onPick={(c) => {
+                      onSetCategoryColor?.(cat, c);
+                      setEditingColorFor(null);
+                    }}
+                  />
+                </div>
+              );
+            })}
+            <div className="category-picker-divider" />
+            {pickerNewCatDraft === null ? (
+              <button
+                className="category-option new-category"
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setPickerNewCatDraft(""); }}
+              >
+                + New Category
+              </button>
+            ) : (
+              <input
+                autoFocus
+                className="inline-add-input"
+                value={pickerNewCatDraft}
+                placeholder="Category name"
+                onChange={(e) => setPickerNewCatDraft(e.target.value)}
+                onBlur={commitPickerNewCategory}
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  e.stopPropagation();
+                  if (e.key === "Enter") commitPickerNewCategory();
+                  else if (e.key === "Escape") setPickerNewCatDraft(null);
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
+
+      {!item.completedAt && onComplete && (
+        <button
+          className="complete-btn"
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onComplete(item.id); }}
+          aria-label="Complete item"
+        >
+          ✓
+        </button>
+      )}
     </article>
+  );
+}
+
+function ProjectSelect({
+  projects,
+  activeId,
+  onSelect,
+}: {
+  projects: GardenProject[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const active = projects.find((p) => p.id === activeId);
+
+  useEffect(() => {
+    if (!open || !btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      if (btnRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        type="button"
+        className={open ? "project-select-btn open" : "project-select-btn"}
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+      >
+        <span className="project-select-label">{active?.name ?? "Select project"}</span>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && coords && createPortal(
+        <div
+          ref={menuRef}
+          className="project-select-menu"
+          style={{ position: "fixed", top: coords.top, left: coords.left, minWidth: coords.width }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {projects.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={p.id === activeId ? "project-select-option active" : "project-select-option"}
+              onClick={() => { onSelect(p.id); setOpen(false); }}
+            >
+              <span>{p.name}</span>
+              {p.id === activeId && (
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M2.5 6.5L5 9L9.5 3.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
+function ColorEditButton({
+  category,
+  currentColor,
+  isOpen,
+  onToggle,
+  onPick,
+}: {
+  category: string;
+  currentColor: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  onPick: (color: string) => void;
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !btnRef.current) {
+      setCoords(null);
+      return;
+    }
+    const rect = btnRef.current.getBoundingClientRect();
+    setCoords({ top: rect.top, left: rect.right + 6 });
+  }, [isOpen]);
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        className="color-edit-btn"
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onToggle(); }}
+        aria-label={`Change color for ${category}`}
+      >
+        <span className="color-edit-dot" style={{ background: currentColor }} />
+      </button>
+      {isOpen && coords && createPortal(
+        <div
+          className="color-swatch-picker"
+          style={{ position: "fixed", top: coords.top, left: coords.left }}
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {colorPalette.map((c) => (
+            <button
+              key={c}
+              className={currentColor === c ? "color-swatch active" : "color-swatch"}
+              type="button"
+              style={{ background: c }}
+              onClick={(e) => { e.stopPropagation(); onPick(c); }}
+              aria-label={c}
+            />
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 

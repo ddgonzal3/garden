@@ -30,15 +30,7 @@ A macOS Tauri desktop task manager (React + Vite frontend, Rust backend).
 
 ## After Making Changes
 
-**When `watch-fe.sh` is running**, most CSS/TSX changes hot-reload automatically. If you need a full page refresh, run:
-
-```bash
-./scripts/reload.sh
-```
-
-This detects the Vite dev server and triggers a webview reload via `curl http://localhost:5173/__reload`. If no dev server is running, it falls back to `./scripts/run.sh` (full debug build + relaunch).
-
-**Always run `./scripts/reload.sh` after finishing a set of changes** so the user can see the result immediately.
+**Do NOT automatically reload or restart the app.** When `watch-fe.sh` is running, Vite HMR picks up CSS/TSX changes instantly — no action needed. If the user needs a full rebuild, they'll run `run.sh` themselves.
 
 ## Conventions
 

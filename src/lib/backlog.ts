@@ -1,19 +1,42 @@
 import type { GardenItem, GardenProject } from "../types";
 
-const colorPalette = [
-  "#70cfc0",
-  "#e6b564",
-  "#8baef4",
-  "#df9b69",
-  "#8fd099",
-  "#c3c9d2",
-  "#b59ef1",
-  "#f08ca8",
+export const colorPalette = [
+  "#C86040",
+  "#D0A050",
+  "#B8C040",
+  "#A0D050",
+  "#60D890",
+  "#50B8B0",
+  "#68A8C0",
+  "#7888C8",
+  "#9080D0",
+  "#B068D0",
+  "#C830A0",
+  "#D85088",
+  "#C07030",
+  "#90A870",
+  "#68A880",
+  "#30A098",
+  "#8098A8",
+  "#7870A0",
+  "#905888",
+  "#5C2D5C",
+  "#287070",
+  "#5838B8",
+  "#804828",
+  "#507848",
 ];
 
-export function categoryColor(category: string): string {
+export function categoryColor(
+  category: string,
+  categoryColors?: Record<string, string>,
+): string {
+  if (categoryColors?.[category]) {
+    return categoryColors[category];
+  }
+
   if (category === "Uncategorized") {
-    return "#adb5c0";
+    return "#8098A8";
   }
 
   let hash = 0;
@@ -25,13 +48,21 @@ export function categoryColor(category: string): string {
   return colorPalette[Math.abs(hash) % colorPalette.length];
 }
 
+export const DEFAULT_BUCKET_NAMES = ["Today", "Later", "Backlog"];
+
+export function bucketLabel(project: GardenProject, bucket: number): string {
+  return project.bucketNames[bucket] ?? `P${bucket + 1}`;
+}
+
 export function createProject(name: string): GardenProject {
   return {
     id: crypto.randomUUID(),
     name,
     categories: ["Uncategorized"],
+    categoryColors: {},
     items: [],
     priorityBucketCount: 3,
+    bucketNames: [...DEFAULT_BUCKET_NAMES],
   };
 }
 
@@ -56,12 +87,25 @@ export function normalizeProject(raw: Record<string, unknown>): GardenProject {
     ? (raw.categories as string[])
     : ["Uncategorized"];
 
+  const categoryColors =
+    raw.categoryColors && typeof raw.categoryColors === "object" && !Array.isArray(raw.categoryColors)
+      ? (raw.categoryColors as Record<string, string>)
+      : {};
+
+  const bucketCount = (raw.priorityBucketCount as number) ?? 3;
+  const rawNames = Array.isArray(raw.bucketNames) ? (raw.bucketNames as string[]) : [];
+  const bucketNames = Array.from({ length: bucketCount }, (_, i) =>
+    rawNames[i] ?? DEFAULT_BUCKET_NAMES[i] ?? `P${i + 1}`,
+  );
+
   return {
     id: (raw.id as string) ?? crypto.randomUUID(),
     name: (raw.name as string) ?? "Untitled Project",
     categories,
+    categoryColors,
     items,
-    priorityBucketCount: (raw.priorityBucketCount as number) ?? 3,
+    priorityBucketCount: bucketCount,
+    bucketNames,
   };
 }
 

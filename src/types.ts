@@ -13,8 +13,10 @@ export type GardenProject = {
   id: string;
   name: string;
   categories: string[];
+  categoryColors: Record<string, string>;
   items: GardenItem[];
   priorityBucketCount: number;
+  bucketNames: string[];
 };
 
 export type Backlog = {
