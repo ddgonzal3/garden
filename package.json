@@ -8,6 +8,7 @@
     "desktop:dev": "cargo tauri dev",
     "build": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && vite build",
     "preview": "vite preview",
+    "tauri": "tauri",
     "app": "npm run build && cargo tauri build --bundles app",
     "app:run": "npm run build && cargo tauri build --bundles app && open src-tauri/target/release/bundle/macos/Garden.app"
   },
