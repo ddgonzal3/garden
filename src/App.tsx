@@ -249,7 +249,11 @@ function App() {
     });
   }
 
-  function createNewItem(bucket: number, category = "Uncategorized") {
+  function createNewItem(
+    bucket: number,
+    category = "Uncategorized",
+    position: "top" | "bottom" = "top",
+  ) {
     const id = crypto.randomUUID();
     mutateActiveProject(
       (project) => {
@@ -257,12 +261,24 @@ function App() {
           ? project.categories
           : [...project.categories, category];
 
-        // Shift all active items in this bucket down by 1 so new item lands at top.
-        const shifted = project.items.map((item) =>
-          item.priorityBucket === bucket && item.completedAt === null
-            ? { ...item, priority: item.priority + 1 }
-            : item,
-        );
+        let items = project.items;
+        let priority: number;
+
+        if (position === "top") {
+          // Shift existing bucket items down, new item takes priority 0.
+          items = items.map((item) =>
+            item.priorityBucket === bucket && item.completedAt === null
+              ? { ...item, priority: item.priority + 1 }
+              : item,
+          );
+          priority = 0;
+        } else {
+          // Append at end — priority = max + 1.
+          priority =
+            project.items
+              .filter((i) => i.priorityBucket === bucket && i.completedAt === null)
+              .reduce((max, i) => Math.max(max, i.priority), -1) + 1;
+        }
 
         const item: GardenItem = {
           id,
@@ -270,13 +286,13 @@ function App() {
           notes: "",
           category,
           priorityBucket: bucket,
-          priority: 0,
+          priority,
           createdAt: new Date().toISOString(),
           completedAt: null,
           status: "idle",
         };
 
-        return { ...project, categories, items: [...shifted, item] };
+        return { ...project, categories, items: [...items, item] };
       },
       category === "Uncategorized" ? { type: "priorityBoard" } : { type: "category", category },
     );
@@ -774,7 +790,15 @@ function App() {
                         items={bucketItems.map((item) => item.id)}
                         strategy={verticalListSortingStrategy}
                       >
-                        <div className="stack" onDoubleClick={() => createNewItem(bucket)}>
+                        <div
+                          className="stack"
+                          onDoubleClick={(e) => {
+                            // Only fire when double-clicking empty stack area, not a card
+                            if (e.target === e.currentTarget) {
+                              createNewItem(bucket, "Uncategorized", "bottom");
+                            }
+                          }}
+                        >
                           {bucketItems.map((item) => (
                             <SortableTaskCard
                               key={item.id}
