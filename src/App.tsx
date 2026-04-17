@@ -253,14 +253,16 @@ function App() {
     const id = crypto.randomUUID();
     mutateActiveProject(
       (project) => {
-        const nextPriority =
-          project.items
-            .filter((item) => item.priorityBucket === bucket && item.completedAt === null)
-            .reduce((max, item) => Math.max(max, item.priority), -1) + 1;
-
         const categories = project.categories.includes(category)
           ? project.categories
           : [...project.categories, category];
+
+        // Shift all active items in this bucket down by 1 so new item lands at top.
+        const shifted = project.items.map((item) =>
+          item.priorityBucket === bucket && item.completedAt === null
+            ? { ...item, priority: item.priority + 1 }
+            : item,
+        );
 
         const item: GardenItem = {
           id,
@@ -268,13 +270,13 @@ function App() {
           notes: "",
           category,
           priorityBucket: bucket,
-          priority: nextPriority,
+          priority: 0,
           createdAt: new Date().toISOString(),
           completedAt: null,
           status: "idle",
         };
 
-        return { ...project, categories, items: [...project.items, item] };
+        return { ...project, categories, items: [...shifted, item] };
       },
       category === "Uncategorized" ? { type: "priorityBoard" } : { type: "category", category },
     );
