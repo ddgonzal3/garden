@@ -617,10 +617,10 @@ function App() {
           </svg>
         </button>
         <div className="titlebar-project-name" data-tauri-drag-region>
-          <svg className="titlebar-leaf" width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M8 14 V 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            <path d="M8 8 C 8 5.5, 6 3.5, 3 3.5 C 3 6.5, 5 8, 8 8 Z" fill="currentColor" />
-            <path d="M8 8 C 8 5.5, 10 3.5, 13 3.5 C 13 6.5, 11 8, 8 8 Z" fill="currentColor" />
+          <svg className="titlebar-leaf" width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 16 V 9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <path d="M9 10.5 C 6 9.5, 3 7.5, 1.5 4 C 4 4.5, 7.5 5.5, 9 9 Z" fill="currentColor" opacity="0.85" />
+            <path d="M9 9.5 C 11 6, 13.5 3, 16.5 2 C 17 6, 14 10, 9 10.5 Z" fill="currentColor" />
           </svg>
           <span>{activeProject.name}</span>
         </div>
