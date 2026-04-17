@@ -615,7 +615,12 @@ function App() {
           </svg>
         </button>
         <div className="titlebar-project-name" data-tauri-drag-region>
-          {activeProject.name}
+          <svg className="titlebar-leaf" width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 14 V 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <path d="M8 8 C 8 5.5, 6 3.5, 3 3.5 C 3 6.5, 5 8, 8 8 Z" fill="currentColor" />
+            <path d="M8 8 C 8 5.5, 10 3.5, 13 3.5 C 13 6.5, 11 8, 8 8 Z" fill="currentColor" />
+          </svg>
+          <span>{activeProject.name}</span>
         </div>
       </div>
       <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
@@ -1270,7 +1275,9 @@ function TaskCardContent({
           onClick={(e) => { e.stopPropagation(); onComplete(item.id); }}
           aria-label="Complete item"
         >
-          ✓
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 8L6.2 11L12 4.5" />
+          </svg>
         </button>
       )}
     </article>

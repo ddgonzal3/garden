@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Garden · Button Prototypes</title>
+<style>
+  :root {
+    --bg: #2a2a2a;
+    --card: color-mix(in srgb, #8fb3a5 32%, #333333);
+    --card-accent: #8fb3a5;
+    --line: rgba(255, 255, 255, 0.13);
+    --text: #dce0e6;
+    --text-mid: #9ba1ab;
+    --text-soft: #6b737e;
+    color-scheme: dark;
+    font-family: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(circle, rgba(255,255,255,0.07) 0.8px, transparent 0.8px) 0 0 / 24px 24px,
+      rgba(36, 36, 36, 0.95);
+    color: var(--text);
+    padding: 40px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    margin: 0 0 6px;
+  }
+  .sub {
+    color: var(--text-mid);
+    font-size: 14px;
+    margin-bottom: 36px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 20px;
+  }
+  .variant {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .variant h2 {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    color: var(--text);
+  }
+  .variant p {
+    font-size: 12px;
+    color: var(--text-mid);
+    margin: 0 0 16px;
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .row:last-child { margin-bottom: 0; }
+  .state-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-soft);
+    width: 72px;
+    flex-shrink: 0;
+    align-self: center;
+  }
+  /* Fake mini card that holds the button pair */
+  .card {
+    position: relative;
+    flex: 1;
+    padding: 14px 16px 38px;
+    border-radius: 13px;
+    background: var(--card);
+    border: 1px solid color-mix(in srgb, var(--card-accent) 22%, var(--line));
+    font-size: 14px;
+    line-height: 1.3;
+    font-weight: 600;
+    color: #f0f2f5;
+  }
+  .card .btns {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ===================================================== */
+  /* VARIANT 1 — matched outlined circles, filled on active */
+  /* ===================================================== */
+  .v1 .btn {
+    width: 24px;
+    height: 24px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.55);
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .v1 .btn:hover { border-color: rgba(255, 255, 255, 0.5); color: #fff; }
+  .v1 .btn.active {
+    background: color-mix(in oklch, var(--card-accent) 70%, #fff 30%);
+    border-color: transparent;
+    color: #1a1a1a;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-accent) 22%, transparent);
+  }
+  .v1 .btn svg { display: block; }
+  .v1 .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+  }
+  .v1 .btn.active .dot {
+    border: none;
+    background: #1a1a1a;
+    width: 6px;
+    height: 6px;
+  }
+
+  /* ===================================================== */
+  /* VARIANT 2 — solid chip, matching squares                */
+  /* ===================================================== */
+  .v2 .btn {
+    width: 26px;
+    height: 26px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .v2 .btn:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  .v2 .btn.active {
+    background: color-mix(in srgb, var(--card-accent) 30%, transparent);
+    border-color: color-mix(in srgb, var(--card-accent) 55%, transparent);
+    color: color-mix(in oklch, var(--card-accent) 55%, #fff 45%);
+  }
+  .v2 .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+  }
+  .v2 .btn.active .dot {
+    background: currentColor;
+    border: none;
+    box-shadow: 0 0 8px color-mix(in srgb, var(--card-accent) 60%, transparent);
+  }
+
+  /* ===================================================== */
+  /* VARIANT 3 — ghost glyphs, no frame                     */
+  /* ===================================================== */
+  .v3 .btn {
+    width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .v3 .btn:hover { color: #fff; }
+  .v3 .btn.active { color: color-mix(in oklch, var(--card-accent) 55%, #fff 45%); }
+  .v3 .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+  }
+  .v3 .btn.active .dot {
+    background: currentColor;
+    border: none;
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--card-accent) 18%, transparent),
+      0 0 10px color-mix(in srgb, var(--card-accent) 45%, transparent);
+  }
+
+  /* ===================================================== */
+  /* VARIANT 4 — soft filled pill, brightens on active      */
+  /* ===================================================== */
+  .v4 .btn {
+    width: 28px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border-radius: 999px;
+    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 160ms ease;
+  }
+  .v4 .btn:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .v4 .btn.active {
+    background: color-mix(in srgb, var(--card-accent) 38%, transparent);
+    color: color-mix(in oklch, var(--card-accent) 40%, #fff 60%);
+  }
+  .v4 .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* shared check svg sizing */
+  .check-svg {
+    width: 12px;
+    height: 12px;
+  }
+</style>
+</head>
+<body>
+<h1>Garden — Card Button Prototypes</h1>
+<p class="sub">Matched in-progress + done buttons. Pick a variant and we'll wire it into App.tsx.</p>
+
+<div class="grid">
+
+  <!-- Variant 1 -->
+  <div class="variant v1">
+    <h2>Variant 1 — Outlined circles, filled on active</h2>
+    <p>Both 24px ringed buttons. Active = filled accent with tight halo.</p>
+    <div class="row">
+      <span class="state-label">Idle</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="state-label">Active</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn active" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn active" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 2 -->
+  <div class="variant v2">
+    <h2>Variant 2 — Rounded square chips</h2>
+    <p>Like keyboard caps. Subtle bg at rest, accent-tinted when active.</p>
+    <div class="row">
+      <span class="state-label">Idle</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="state-label">Active</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn active" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn active" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 3 -->
+  <div class="variant v3">
+    <h2>Variant 3 — Ghost glyphs, no frame</h2>
+    <p>Minimal. Only the icon, brightens + glows on active.</p>
+    <div class="row">
+      <span class="state-label">Idle</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="state-label">Active</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn active" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn active" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Variant 4 -->
+  <div class="variant v4">
+    <h2>Variant 4 — Soft pill chips</h2>
+    <p>Capsule shape, pill background. Active = accent-tinted fill.</p>
+    <div class="row">
+      <span class="state-label">Idle</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <span class="state-label">Active</span>
+      <div class="card">
+        Card title
+        <div class="btns">
+          <button class="btn active" aria-label="In progress"><span class="dot"></span></button>
+          <button class="btn active" aria-label="Done">
+            <svg class="check-svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5L5 9L9.5 3.5"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
