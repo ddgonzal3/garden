@@ -48,7 +48,7 @@ export function categoryColor(
   return colorPalette[Math.abs(hash) % colorPalette.length];
 }
 
-export const DEFAULT_BUCKET_NAMES = ["Today", "Later", "Backlog"];
+export const DEFAULT_BUCKET_NAMES = ["Now", "Later", "Someday"];
 
 export function bucketLabel(project: GardenProject, bucket: number): string {
   return project.bucketNames[bucket] ?? `P${bucket + 1}`;

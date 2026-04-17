@@ -12,8 +12,8 @@
     "windows": [
       {
         "title": "Garden",
-        "width": 1480,
-        "height": 940,
+        "width": 1040,
+        "height": 820,
         "minWidth": 720,
         "minHeight": 500,
         "resizable": true,
