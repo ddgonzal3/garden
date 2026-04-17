@@ -16,8 +16,8 @@ Meta-skill that creates new autonomous scan agent skills for the Garden codebase
 
 Examples:
 - `/build-scanner accessibility` — creates `scan-accessibility`
-- `/build-scanner state-sync "Find state desync between BacklogStore and UI"`
-- `/build-scanner swiftui-performance`
+- `/build-scanner state-sync "Find state desync between persisted store and React UI"`
+- `/build-scanner react-performance`
 
 ## Step 1: Gather Requirements
 
@@ -25,8 +25,8 @@ Before generating anything, answer these questions. Ask the user if anything is 
 
 ### Required
 
-1. **Domain name** — becomes `scan-<domain>` (e.g., `accessibility`, `state-sync`, `swiftui-performance`)
-2. **One-sentence purpose** — what does this scanner hunt for? (e.g., "SwiftUI performance issues", "data model inconsistencies", "unused code")
+1. **Domain name** — becomes `scan-<domain>` (e.g., `accessibility`, `state-sync`, `react-performance`)
+2. **One-sentence purpose** — what does this scanner hunt for? (e.g., "React render performance issues", "data model inconsistencies", "unused code")
 3. **User perspective** — who gets hurt by these issues, and how? This becomes the scanner's "think like a ___" framing.
    - User: "the app is laggy", "my items disappeared", "the sidebar doesn't update"
    - Developer: "the build is slow", "this file is 800 lines", "tests are missing"
@@ -36,10 +36,10 @@ Before generating anything, answer these questions. Ask the user if anything is 
 4. **Focus modes** — sub-categories the user can pass to narrow exploration (e.g., `views`/`services`/`models`). If the domain is narrow enough, skip this.
 5. **Key investigation areas** — specific files, directories, or patterns to check. If unknown, the scanner will explore freely.
 6. **Proof strategy** — how does the scanner prove a finding? **TDD is mandatory for all scanners.** Every scanner must write a failing test before fixing. Choose the appropriate approach:
-   - **Unit test** (XCTest) — for logic bugs, state issues, service behavior, data model correctness. Most common.
-   - **UI test** (XCUITest) — for user-facing behavior requiring real UI interactions, navigation flows, accessibility. Uses `GardenUITests/`.
+   - **Unit test** (Vitest) — for logic bugs, state issues, service behavior, data model correctness. Most common.
+   - **UI test** (Playwright or similar) — for user-facing behavior requiring real UI interactions, navigation flows, accessibility.
    Structural checks (grep, doc comparison) are acceptable as **supplementary** evidence but never as the sole proof. If the finding is real, there exists a test that can fail.
-7. **Fix scope** — what kinds of fixes are in scope? (e.g., "Swift only", "Swift + project config", "docs only")
+7. **Fix scope** — what kinds of fixes are in scope? (e.g., "TypeScript only", "TS + Tauri config", "docs only")
 
 ## Step 2: Generate the Skill
 
@@ -72,7 +72,7 @@ Read these to get your bearings and avoid retreading old ground:
 
 1. `docs/scan-journals/{{domain}}-scan-journal.md` — past investigations
 2. `CLAUDE.md` — architecture and conventions
-3. `Garden/Services/BacklogStore.swift` — single source of truth for state
+3. `src/lib/backlog.ts` + `src/lib/storage.ts` — single source of truth for state + persistence
 {{#each extra_orient_files}}
 4. `{{this.path}}` — {{this.description}}
 {{/each}}
@@ -145,18 +145,18 @@ Then pick the highest-priority item (from backlog or freshly found) to prove and
 
 **Every finding must be proven with a failing test before any fix is attempted.** Choose the right test tier:
 
-### Tier 1: Unit test (XCTest)
+### Tier 1: Unit test (Vitest)
 For logic bugs, state issues, service behavior, and data model correctness. Write a test that exercises the buggy path.
 
 ```bash
-xcodebuild test -scheme Garden -destination 'platform=macOS' -only-testing "GardenTests/<TestClass>/<testMethod>" 2>&1 | tail -20
+npx vitest run <test-file> 2>&1 | tail -20
 ```
 
-### Tier 2: UI test (XCUITest)
+### Tier 2: UI test (Playwright or similar)
 For user-facing behavior requiring real UI interactions — navigation flows, sidebar selection, inline editing, drag-and-drop.
 
 ```bash
-xcodebuild test -scheme Garden -destination 'platform=macOS' -only-testing "GardenUITests/<TestClass>/<testMethod>" 2>&1 | tail -20
+npx playwright test <spec-file> 2>&1 | tail -20
 ```
 
 {{proof_strategy_section}}
@@ -171,13 +171,13 @@ Minimal change that fixes the root cause.
 2. Run the test — confirm it passes
 3. Run the full test suite to check for regressions:
    ```bash
-   xcodebuild test -scheme Garden -destination 'platform=macOS' 2>&1 | tail -20
+   npx vitest run 2>&1 | tail -20
    ```
 
 ## Step 5: Verify Build
 
 ```bash
-xcodebuild -scheme Garden -destination 'platform=macOS' build 2>&1 | tail -5
+npm run build 2>&1 | tail -5 && (cd src-tauri && cargo check) 2>&1 | tail -5
 ```
 
 Do NOT proceed to the next step if the build is broken — fix or revert first.
@@ -266,31 +266,31 @@ Pick the simplest format that captures the scanner's findings.
 
 **Every scanner must write a failing test before fixing.** This is non-negotiable. If a finding is real, there exists a test that can fail. Choose the right tier:
 
-#### Tier 1: Unit test (XCTest) — default for most scanners
+#### Tier 1: Unit test (Vitest) — default for most scanners
 
 ```markdown
 If you suspect an issue, **write a failing unit test before fixing anything.**
 
-1. Create or update the test file for the affected code in `GardenTests/`
+1. Create or update the unit test next to the affected module (e.g., `src/lib/<module>.test.ts`)
 2. Write a test that demonstrates the issue
 3. Run it and confirm it **fails**:
    \`\`\`bash
-   xcodebuild test -scheme Garden -destination 'platform=macOS' -only-testing "GardenTests/<TestClass>/<testMethod>"
+   npx vitest run <test-file>
    \`\`\`
 ```
 
-Best for: logic bugs, state issues, service behavior, data model correctness, BacklogStore mutations.
+Best for: logic bugs, state issues, service behavior, data model correctness, persistence mutations.
 
-#### Tier 2: UI test (XCUITest) — for user-facing behavior
+#### Tier 2: UI test (Playwright) — for user-facing behavior
 
 ```markdown
 If the issue involves real user interaction (sidebar navigation, inline editing, drag-and-drop), **write a failing UI test.**
 
-1. Create or update a test in `GardenUITests/`
-2. Use XCUIApplication and accessibility identifiers for element lookup
+1. Create or update a test in `tests/e2e/` (or similar Playwright spec folder)
+2. Use role/text locators or `data-testid` hooks for element lookup
 3. Run it and confirm it **fails**:
    \`\`\`bash
-   xcodebuild test -scheme Garden -destination 'platform=macOS' -only-testing "GardenUITests/<TestClass>/<testMethod>"
+   npx playwright test <spec-file>
    \`\`\`
 ```
 
@@ -338,7 +338,7 @@ Run through the generated skill mentally as a checklist:
 - [ ] Step 2 has persona-driven "how to think", investigation guidance, key files, 15-min dead-end limit, "Log All Findings" subsection
 - [ ] Step 3 has concrete proof strategy with a **failing test** (unit or UI — structural checks alone are insufficient)
 - [ ] Step 4 has fix + regression test instructions
-- [ ] Step 5 has Verify Build (`xcodebuild -scheme Garden`), with "fix or revert" gate
+- [ ] Step 5 has Verify Build (`npm run build` + `cargo check`), with "fix or revert" gate
 - [ ] Step 6 has journal-before-commit, commit all together, push, PR reuse check, `/review-pr`, post-review unstaged check
 - [ ] Step 7 has journal format (reference only — the action is in Step 6) with example entries + backlog maintenance
 - [ ] Step 8 has structured report template

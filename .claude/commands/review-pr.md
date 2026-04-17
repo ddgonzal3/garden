@@ -162,62 +162,62 @@ Each agent prompt should include:
 - [ ] Code intent is clear without excessive comments
 - [ ] Comments explain "why", not "what"
 - [ ] Consistent style with the rest of the codebase
-- [ ] SwiftUI view bodies are readable (complex logic extracted to computed properties or subviews)
-- [ ] View modifier chains are readable (not 15 modifiers deep without intermediate variables)
+- [ ] React components are readable (complex logic extracted to helper functions or sub-components)
+- [ ] Prop chains and hook dependencies are clear (not deeply threaded without justification)
 
 #### 6. Performance
 
-- [ ] No unnecessary SwiftUI re-renders (proper use of `@State`, `@StateObject`, `@ObservedObject`)
-- [ ] Large lists use `LazyVStack`/`LazyHStack` where appropriate
+- [ ] No unnecessary re-renders (proper use of `useMemo`, `useCallback`, stable refs)
+- [ ] Large lists are virtualized where needed
 - [ ] No N+1 patterns in data access (repeated filtering in loops)
-- [ ] File I/O is not happening on the main thread for large operations
+- [ ] File I/O is async and not blocking UI (Tauri `fs` plugin calls)
 - [ ] Expensive computations are cached or memoized where appropriate
-- [ ] No Combine subscription leaks (AnyCancellable stored properly)
+- [ ] No stale closures in effect handlers
 
 #### 7. Type Safety
 
-- [ ] No force-unwraps (`!`) unless truly safe with a comment explaining why
-- [ ] No `as!` force casts — use `as?` with proper handling
-- [ ] Proper use of optionals — no excessive optional chaining hiding logic errors
-- [ ] Codable conformance handles all edge cases (missing keys, wrong types)
-- [ ] Enums are preferred over stringly-typed values where appropriate
+- [ ] No non-null assertions (`!`) unless truly safe with a comment explaining why
+- [ ] No `as unknown as T` casts — use proper type guards
+- [ ] Proper handling of optional/undefined values (no hidden logic errors)
+- [ ] JSON parsing handles all edge cases (missing keys, wrong types) via `normalizeProject`
+- [ ] Unions/enums preferred over stringly-typed values where appropriate
 
 #### 8. PR Hygiene
 
 - [ ] Changes are focused on a single concern (not mixing features with unrelated refactors)
 - [ ] No unrelated formatting or whitespace-only diffs
-- [ ] No temporary debug logging left in (`print()`, `debugLog()` calls that shouldn't ship)
+- [ ] No temporary debug logging left in (`console.log`, `debugger` calls that shouldn't ship)
 - [ ] Commit messages are clear and follow conventional commits format
 
 #### 9. Agent Implications
 
-Garden's AI agent (`AgentService`) must be able to perform all backlog operations. When code changes affect data models, BacklogStore methods, or the agent's tool definitions, the agent must stay in sync.
+If/when Garden adds an AI agent surface, its tools must stay in sync with UI-exposed mutations. For now, this section is a placeholder — revisit if an agent layer is introduced.
 
 **Reviewer D should:**
 
 1. **Read the PR diff** (`gh pr diff <PR_NUMBER>`) and all changed files
-2. **Read these reference files** to understand the current agent surface:
-   - `Garden/Services/AgentService.swift` — agent implementation and tool definitions
-   - `Garden/Services/BacklogStore.swift` — all backlog mutation methods
-   - `Garden/Models/` — data models the agent works with
+2. **Read these reference files** to understand the current data surface:
+   - `src/lib/backlog.ts` — domain helpers + normalization
+   - `src/lib/storage.ts` — persistence
+   - `src/types.ts` — data models
 3. **Check each category below**
 
 ##### 9a. Tool Coverage Gaps
 
-- [ ] Does the PR add or change a BacklogStore method that users can trigger via the UI?
-- [ ] If yes, does a corresponding AI tool exist that lets the agent perform the same operation?
+- [ ] Does the PR add or change a mutation that users can trigger via the UI?
+- [ ] If an agent exists, does a corresponding tool let the agent perform the same operation?
 - [ ] If no tool exists, flag as **Critical** — the agent cannot do what the user can do
 - [ ] If a tool exists but its parameters don't cover new options, flag as **Critical**
 
 ##### 9b. Tool Schema Drift
 
-- [ ] Do any changed BacklogStore methods or model properties affect existing tool handlers?
-- [ ] If a method's signature changed (renamed params, new required fields, removed options), does the corresponding tool's schema still match?
+- [ ] Do any changed helpers or model properties affect existing tool handlers?
+- [ ] If a function signature changed (renamed params, new required fields, removed options), does the corresponding tool's schema still match?
 - [ ] If a tool's description references behavior that changed in this PR, flag as **Suggestion**
 
 ##### 9c. Data Model Sync
 
-- [ ] If the PR modifies `GardenItem`, `GardenProject`, or `Backlog` models, do the agent's tool schemas reflect the new shape?
+- [ ] If the PR modifies `GardenItem`, `GardenProject`, or `Backlog` types, do any agent tool schemas reflect the new shape?
 - [ ] If new properties are added to models, can the agent set/read them through existing tools?
 
 **Severity guidelines for Section 9:**
@@ -251,16 +251,16 @@ Tell each agent to return findings in this exact structure:
 ## Findings
 
 ### Critical
-- `File.swift:42` — [Description of the issue and suggested fix]
+- `File.tsx:42` — [Description of the issue and suggested fix]
 
 ### Suggestions
-- `File.swift:15` — [Description and rationale]
+- `File.tsx:15` — [Description and rationale]
 
 ### Nitpicks
-- `File.swift:88` — [Minor observation]
+- `File.tsx:88` — [Minor observation]
 
 ### File Size & Modularity Report
-- `File.swift` — [X lines] — [What could be extracted into its own module and why]
+- `File.tsx` — [X lines] — [What could be extracted into its own module and why]
 
 ### Summary
 [One paragraph: What is the PR doing? Overall quality assessment.]
@@ -316,19 +316,19 @@ Commit and push the review fixes automatically. Use a conventional `fix:` commit
 
 ### Critical Issues Fixed
 
-- `File.swift:42` — [Description of the issue and what you did]
+- `File.tsx:42` — [Description of the issue and what you did]
 
 ### Suggestions Applied
 
-- `File.swift:15` — [Description and rationale]
+- `File.tsx:15` — [Description and rationale]
 
 ### Nitpicks (For Your Awareness)
 
-- `File.swift:88` — [Minor observation, not fixed]
+- `File.tsx:88` — [Minor observation, not fixed]
 
 ### File Size & Modularity (Flagged for Refactor)
 
-- `File.swift` — [X lines] — [What should be extracted into its own module.]
+- `File.tsx` — [X lines] — [What should be extracted into its own module.]
 
 ### Agent Implications
 

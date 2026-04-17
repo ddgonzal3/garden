@@ -65,7 +65,7 @@ git merge --abort 2>/dev/null || true
 Parse the dry-run output:
 - Count the number of conflicting files
 - List which files conflict
-- Note if any conflicts are in "high-risk" files (services, large shared files, config files, project.pbxproj, project.yml)
+- Note if any conflicts are in "high-risk" files (services, large shared files, config files, lockfiles)
 
 ## Step 3: Choose strategy
 
@@ -77,11 +77,11 @@ Use this decision matrix:
 | 1-2 conflicts in simple files, AND branch has ≤ 3 commits | **Rebase** (manageable) |
 | 1-2 conflicts but branch has 4+ commits | **Merge** (too many replay steps for rebase) |
 | 3+ conflicting files | **Merge** (less risky) |
-| Any conflict in project.pbxproj | **Merge** then regenerate: `xcodegen` |
+| Any conflict in `package-lock.json` / `Cargo.lock` | **Merge** then regenerate lockfiles |
 | 5+ branch files AND 3+ conflicts | **Stop and ask the user** — too risky for automated resolution |
 
 **Tell the user which strategy you're choosing and why before proceeding.** Example:
-> "3 files conflict and your branch has 7 commits — I'll merge main in (safer than replaying 7 commits through conflicts). Conflicting files: `Foo.swift`, `Bar.swift`, `ContentView.swift`."
+> "3 files conflict and your branch has 7 commits — I'll merge main in (safer than replaying 7 commits through conflicts). Conflicting files: `App.tsx`, `styles.css`, `backlog.ts`."
 
 ## Step 4: Execute the integration
 
@@ -107,7 +107,7 @@ git merge main
 
 Resolve conflicts one file at a time. For each conflict:
 1. Read both sides of the conflict carefully
-2. If the conflict is in generated files (project.pbxproj, build output), regenerate rather than manually resolving
+2. If the conflict is in generated files (lockfiles, build output), regenerate rather than manually resolving
 3. If you're uncertain about intent of either side, **stop and ask the user**
 4. After resolving, stage the file
 
@@ -119,7 +119,7 @@ git commit  # Accept default merge message, or write a descriptive one
 ## Step 5: Build verification
 
 ```bash
-xcodebuild -scheme Garden -destination 'platform=macOS' build 2>&1 | tail -5
+npm run build && cargo -C src-tauri check 2>&1 | tail -5
 ```
 
 If the build **fails**:

@@ -7,7 +7,7 @@ Generate a prompt that can be given to a fresh Claude context to debug the issue
 ## Rules
 
 1. **User POV only.** Describe what the user sees, does, and expects. No implementation details about what's wrong in the code.
-2. **No technical diagnosis.** Don't say "the state isn't updating" or "SwiftUI cached the view." The fresh context needs to form its own hypothesis.
+2. **No technical diagnosis.** Don't say "the state isn't updating" or "React memoized the view." The fresh context needs to form its own hypothesis.
 3. **Include file path hints.** List the key files/components involved so the fresh context knows where to start reading. But don't say what's wrong in those files.
 4. **Include reproduction steps.** Step-by-step what the user does to trigger the bug.
 5. **Include what was already tried.** Briefly list approaches that were attempted and didn't fully resolve the issue, so the fresh context doesn't repeat them.
@@ -30,8 +30,8 @@ Generate a prompt that can be given to a fresh Claude context to debug the issue
 [What should happen instead]
 
 ### Key files to investigate
-- `Garden/Views/File.swift` — [brief role, e.g., "handles sidebar navigation"]
-- `Garden/Services/File.swift` — [brief role]
+- `src/App.tsx` — [brief role, e.g., "handles sidebar navigation"]
+- `src/lib/backlog.ts` — [brief role]
 
 ### What was already tried (didn't fully fix it)
 - [approach 1 — brief description of what was done and why it wasn't sufficient]

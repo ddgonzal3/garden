@@ -16,3 +16,17 @@ vite.config.d.ts
 
 # Tauri / Rust
 src-tauri/target/
+
+# Xcode / Swift (pre-Tauri residue)
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+*.xcuserstate
+*.pbxuser
+*.hmap
+*.ipa
+*.dSYM
+.build/
+Pods/
+*.profraw
