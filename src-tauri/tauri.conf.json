@@ -14,16 +14,25 @@
         "title": "Garden",
         "width": 1480,
         "height": 940,
+        "minWidth": 1280,
+        "minHeight": 600,
         "resizable": true,
         "fullscreen": false,
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
+        "trafficLightPosition": { "x": 22, "y": 22 },
         "acceptFirstMouse": true,
-        "transparent": true
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["sidebar"],
+          "state": "active",
+          "radius": 0
+        }
       }
     ],
     "withGlobalTauri": true,
+    "macOSPrivateApi": true,
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'"
     }

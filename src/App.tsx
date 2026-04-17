@@ -597,15 +597,16 @@ function App() {
     <div className={sidebarHidden ? "app-shell sidebar-hidden" : "app-shell"} onClick={handleBackgroundClick}>
       <div className="titlebar" data-tauri-drag-region>
         <button
-          className="sidebar-toggle"
+          className={sidebarHidden ? "sidebar-toggle closed" : "sidebar-toggle"}
           type="button"
           onClick={(e) => { e.stopPropagation(); toggleSidebar(); }}
           aria-label={sidebarHidden ? "Show sidebar" : "Hide sidebar"}
           title={sidebarHidden ? "Show sidebar (⌘B)" : "Hide sidebar (⌘B)"}
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
-            <rect x="2.5" y="4" width="15" height="12" rx="2.5" />
-            <line x1="7.5" y1="4" x2="7.5" y2="16" />
+          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="3" y="4.5" width="16" height="13" rx="2.6" />
+            <line x1="8.5" y1="4.5" x2="8.5" y2="17.5" />
+            <rect className="sidebar-toggle-fill" x="3" y="4.5" width="5.5" height="13" rx="2.6" fill="currentColor" stroke="none" />
           </svg>
         </button>
         <div className="titlebar-project-name" data-tauri-drag-region>
@@ -613,20 +614,14 @@ function App() {
         </div>
       </div>
       <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
-        <div className="sidebar-project">
-          <ProjectSelect
-            projects={backlog.projects}
-            activeId={activeProject.id}
-            onSelect={switchProject}
-          />
-          <button
-            className="ghost-icon"
-            type="button"
-            onClick={() => { setAddingProject(true); setProjectDraft(""); }}
-          >
-            +
-          </button>
-        </div>
+        <ProjectSelect
+          projects={backlog.projects}
+          activeId={activeProject.id}
+          isActive={selection.type === "priorityBoard"}
+          onSelect={switchProject}
+          onNavigate={() => startTransition(() => setSelection({ type: "priorityBoard" }))}
+          onRequestNewProject={() => { setAddingProject(true); setProjectDraft(""); }}
+        />
         {addingProject && (
           <input
             autoFocus
@@ -643,17 +638,6 @@ function App() {
         )}
 
         <nav className="sidebar-nav">
-          <button
-            className={
-              selection.type === "priorityBoard" ? "sidebar-link active" : "sidebar-link"
-            }
-            type="button"
-            onClick={() => startTransition(() => setSelection({ type: "priorityBoard" }))}
-          >
-            <span>Priority Board</span>
-            <span>{activeItems.length}</span>
-          </button>
-
           <div className="sidebar-section">
             <div className="sidebar-section-head">
               <span>Categories</span>
@@ -916,7 +900,6 @@ function DroppableColumn({
         >
           +
         </button>
-        <div className="count-pill">{itemCount}</div>
       </div>
       <div className="column-rule" />
       {children}
@@ -1276,48 +1259,68 @@ function TaskCardContent({
 function ProjectSelect({
   projects,
   activeId,
+  isActive,
   onSelect,
+  onNavigate,
+  onRequestNewProject,
 }: {
   projects: GardenProject[];
   activeId: string;
+  isActive: boolean;
   onSelect: (id: string) => void;
+  onNavigate: () => void;
+  onRequestNewProject: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState<{ top: number; left: number; width: number } | null>(null);
-  const btnRef = useRef<HTMLButtonElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const active = projects.find((p) => p.id === activeId);
 
   useEffect(() => {
-    if (!open || !btnRef.current) return;
-    const rect = btnRef.current.getBoundingClientRect();
+    if (!open || !wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
     setCoords({ top: rect.bottom + 6, left: rect.left, width: rect.width });
   }, [open]);
 
   useEffect(() => {
     if (!open) return;
-    function handleOutside(e: MouseEvent) {
+    function handleOutside(e: PointerEvent) {
       if (menuRef.current?.contains(e.target as Node)) return;
-      if (btnRef.current?.contains(e.target as Node)) return;
+      if (wrapperRef.current?.contains(e.target as Node)) return;
       setOpen(false);
     }
-    document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
+    window.addEventListener("pointerdown", handleOutside, true);
+    return () => window.removeEventListener("pointerdown", handleOutside, true);
   }, [open]);
+
+  const pillClass = [
+    "project-pill",
+    open && "open",
+    isActive && "active",
+  ].filter(Boolean).join(" ");
 
   return (
     <>
-      <button
-        ref={btnRef}
-        type="button"
-        className={open ? "project-select-btn open" : "project-select-btn"}
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-      >
-        <span className="project-select-label">{active?.name ?? "Select project"}</span>
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </button>
+      <div ref={wrapperRef} className={pillClass}>
+        <button
+          type="button"
+          className="project-pill-name"
+          onClick={(e) => { e.stopPropagation(); onNavigate(); setOpen(false); }}
+        >
+          <span className="project-select-label">{active?.name ?? "Select project"}</span>
+        </button>
+        <button
+          type="button"
+          className="project-pill-chevron"
+          onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+          aria-label="Switch project"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M3 4.5L6 7.5L9 4.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+      </div>
       {open && coords && createPortal(
         <div
           ref={menuRef}
@@ -1341,6 +1344,14 @@ function ProjectSelect({
               )}
             </button>
           ))}
+          <div className="project-select-divider" />
+          <button
+            type="button"
+            className="project-select-option new-project"
+            onClick={() => { setOpen(false); onRequestNewProject(); }}
+          >
+            + New Garden
+          </button>
         </div>,
         document.body,
       )}
