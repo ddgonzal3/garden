@@ -1,30 +1,30 @@
 import type { GardenItem, GardenProject, ItemStatus } from "../types";
 
 export const colorPalette = [
-  "#C86040",
-  "#D0A050",
-  "#B8C040",
-  "#A0D050",
-  "#60D890",
-  "#50B8B0",
-  "#68A8C0",
-  "#7888C8",
-  "#9080D0",
-  "#B068D0",
-  "#C830A0",
-  "#D85088",
-  "#C07030",
-  "#90A870",
-  "#68A880",
-  "#30A098",
-  "#8098A8",
-  "#7870A0",
-  "#905888",
-  "#5C2D5C",
-  "#287070",
-  "#5838B8",
-  "#804828",
-  "#507848",
+  "#7a2f3a",  // deep maroon (Crossfades)
+  "#8a3a38",  // crimson (Comp sound)
+  "#8a4a35",  // rust orange (Losing variations)
+  "#8a5a3a",  // warm brown (Suppress outputs)
+  "#7a2e2e",  // oxblood
+  "#8a3630",  // burnt red
+  "#6a5a3a",  // olive brown
+  "#6a7d5a",  // olive green (Internal timeline)
+  "#4a6a4a",  // forest
+  "#3f7a7a",  // teal (Clarification)
+  "#4e6578",  // slate blue (GenAI)
+  "#5b6a7a",  // muted blue-gray (Uncategorized)
+  "#5d7390",  // cool slate (Warp markers)
+  "#3a4a5e",  // deep navy slate
+  "#5f4a6e",  // muted purple (APIs)
+  "#6a4a78",  // plum
+  "#7a5bb5",  // vivid purple (in-progress badge)
+  "#4a3e5e",  // indigo
+  "#7a3e35",  // maroon-red (DAW)
+  "#4a2e35",  // dark wine
+  "#6a4030",  // mahogany
+  "#3a5e5e",  // dark teal
+  "#4a5a4a",  // moss
+  "#3e4a58",  // charcoal blue
 ];
 
 export function categoryColor(
@@ -60,6 +60,7 @@ export function createProject(name: string): GardenProject {
     name,
     categories: ["Uncategorized"],
     categoryColors: {},
+    customColors: [],
     items: [],
     priorityBucketCount: 3,
     bucketNames: [...DEFAULT_BUCKET_NAMES],
@@ -93,6 +94,10 @@ export function normalizeProject(raw: Record<string, unknown>): GardenProject {
       ? (raw.categoryColors as Record<string, string>)
       : {};
 
+  const customColors = Array.isArray(raw.customColors)
+    ? (raw.customColors as string[]).filter((c) => typeof c === "string")
+    : [];
+
   const bucketCount = (raw.priorityBucketCount as number) ?? 3;
   const rawNames = Array.isArray(raw.bucketNames) ? (raw.bucketNames as string[]) : [];
   const bucketNames = Array.from({ length: bucketCount }, (_, i) =>
@@ -104,6 +109,7 @@ export function normalizeProject(raw: Record<string, unknown>): GardenProject {
     name: (raw.name as string) ?? "Untitled Project",
     categories,
     categoryColors,
+    customColors,
     items,
     priorityBucketCount: bucketCount,
     bucketNames,

@@ -55,6 +55,7 @@ function App() {
   const [addingCategory, setAddingCategory] = useState(false);
   const [categoryDraft, setCategoryDraft] = useState("");
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
+  const [sidebarColorCategory, setSidebarColorCategory] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [notesItemId, setNotesItemId] = useState<string | null>(null);
   const [addingProject, setAddingProject] = useState(false);
@@ -382,6 +383,19 @@ function App() {
     }));
   }
 
+  function rememberCustomColor(color: string) {
+    mutateActiveProject((project) => {
+      const normalized = color.toLowerCase();
+      const isPreset = colorPalette.some((c) => c.toLowerCase() === normalized);
+      const hasCustom = project.customColors.some((c) => c.toLowerCase() === normalized);
+      if (isPreset || hasCustom) return project;
+      return {
+        ...project,
+        customColors: [color, ...project.customColors].slice(0, 24),
+      };
+    });
+  }
+
   function moveItemToBucket(itemId: string, targetBucket: number) {
     mutateActiveProject((project) => {
       const nextPriority =
@@ -704,27 +718,23 @@ function App() {
               }
 
               return (
-                <button
+                <SidebarCategoryRow
                   key={category}
-                  className={
-                    selection.type === "category" && selection.category === category
-                      ? "sidebar-link active"
-                      : "sidebar-link"
+                  category={category}
+                  color={categoryColor(category, activeProject.categoryColors)}
+                  customColors={activeProject.customColors}
+                  count={getItemsInCategory(activeProject, category).length}
+                  isActive={selection.type === "category" && selection.category === category}
+                  isColorPickerOpen={sidebarColorCategory === category}
+                  onSelect={() => startTransition(() => setSelection({ type: "category", category }))}
+                  onStartRename={() => { setRenamingCategory(category); setRenameDraft(category); }}
+                  onToggleColorPicker={() =>
+                    setSidebarColorCategory((cur) => (cur === category ? null : category))
                   }
-                  type="button"
-                  onClick={() => startTransition(() => setSelection({ type: "category", category }))}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setRenamingCategory(category);
-                    setRenameDraft(category);
-                  }}
-                >
-                  <span className="sidebar-category-label">
-                    <span className="category-dot" style={{ background: categoryColor(category, activeProject.categoryColors) }} />
-                    {category}
-                  </span>
-                  <span>{getItemsInCategory(activeProject, category).length}</span>
-                </button>
+                  onCloseColorPicker={() => setSidebarColorCategory(null)}
+                  onPickColor={(c) => setCategoryColor(category, c)}
+          onCommitCustomColor={(c) => rememberCustomColor(c)}
+                />
               );
             })}
           </div>
@@ -774,6 +784,9 @@ function App() {
                               editing={editing}
                               categories={activeProject.categories}
                               categoryColors={activeProject.categoryColors}
+                customColors={activeProject.customColors}
+                      customColors={activeProject.customColors}
+                              customColors={activeProject.customColors}
                               categoryPickerItemId={categoryPickerItemId}
                               isSelected={selectedId === item.id}
                               isDragOverlay={false}
@@ -785,6 +798,8 @@ function App() {
                               onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
                               onChangeCategory={changeCategory}
                               onSetCategoryColor={setCategoryColor}
+                      onRememberCustomColor={rememberCustomColor}
+                              onRememberCustomColor={rememberCustomColor}
                               onRenameCategory={renameCategory}
                               onToggleInProgress={toggleInProgress}
                               onOpenNotes={(id) => setNotesItemId(id)}
@@ -812,6 +827,8 @@ function App() {
                       editing={editing}
                       categories={activeProject.categories}
                       categoryColors={activeProject.categoryColors}
+                customColors={activeProject.customColors}
+                      customColors={activeProject.customColors}
                       categoryPickerItemId={categoryPickerItemId}
                       isSelected={selectedId === item.id}
                       isDragOverlay={false}
@@ -823,6 +840,7 @@ function App() {
                       onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
                       onChangeCategory={changeCategory}
                       onSetCategoryColor={setCategoryColor}
+                      onRememberCustomColor={rememberCustomColor}
                       onRenameCategory={renameCategory}
                       onToggleInProgress={toggleInProgress}
                       onOpenNotes={(id) => setNotesItemId(id)}
@@ -840,6 +858,7 @@ function App() {
                 item={activeDragItem}
                 editing={null}
                 categoryColors={activeProject.categoryColors}
+                customColors={activeProject.customColors}
                 isSelected={false}
                 isDragOverlay={true}
                 isBeingDragged={false}
@@ -940,6 +959,7 @@ type SortableTaskCardProps = {
   editing: EditingState | null;
   categories: string[];
   categoryColors: Record<string, string>;
+  customColors: string[];
   categoryPickerItemId: string | null;
   isSelected: boolean;
   isDragOverlay: boolean;
@@ -951,6 +971,7 @@ type SortableTaskCardProps = {
   onCategoryClick: (itemId: string) => void;
   onChangeCategory: (itemId: string, category: string) => void;
   onSetCategoryColor: (category: string, color: string) => void;
+  onRememberCustomColor: (color: string) => void;
   onRenameCategory: (oldName: string, newName: string) => void;
   onToggleInProgress: (itemId: string) => void;
   onOpenNotes: (itemId: string) => void;
@@ -962,6 +983,7 @@ function SortableTaskCard({
   editing,
   categories,
   categoryColors,
+  customColors,
   categoryPickerItemId,
   isSelected,
   isDragOverlay,
@@ -973,6 +995,7 @@ function SortableTaskCard({
   onCategoryClick,
   onChangeCategory,
   onSetCategoryColor,
+  onRememberCustomColor,
   onRenameCategory,
   onToggleInProgress,
   onOpenNotes,
@@ -1002,6 +1025,7 @@ function SortableTaskCard({
         editing={editing}
         categories={categories}
         categoryColors={categoryColors}
+        customColors={customColors}
         showCategoryPicker={categoryPickerItemId === item.id}
         isSelected={isSelected}
         isDragOverlay={isDragOverlay}
@@ -1013,6 +1037,7 @@ function SortableTaskCard({
         onCategoryClick={onCategoryClick}
         onChangeCategory={onChangeCategory}
         onSetCategoryColor={onSetCategoryColor}
+        onRememberCustomColor={onRememberCustomColor}
         onRenameCategory={onRenameCategory}
         onToggleInProgress={onToggleInProgress}
         onOpenNotes={onOpenNotes}
@@ -1029,6 +1054,7 @@ type TaskCardContentProps = {
   editing: EditingState | null;
   categories?: string[];
   categoryColors?: Record<string, string>;
+  customColors?: string[];
   showCategoryPicker?: boolean;
   isSelected: boolean;
   isDragOverlay: boolean;
@@ -1040,6 +1066,7 @@ type TaskCardContentProps = {
   onCategoryClick?: (itemId: string) => void;
   onChangeCategory?: (itemId: string, category: string) => void;
   onSetCategoryColor?: (category: string, color: string) => void;
+  onRememberCustomColor?: (color: string) => void;
   onRenameCategory?: (oldName: string, newName: string) => void;
   onToggleInProgress?: (itemId: string) => void;
   onOpenNotes?: (itemId: string) => void;
@@ -1051,6 +1078,7 @@ function TaskCardContent({
   editing,
   categories = [],
   categoryColors = {},
+  customColors = [],
   showCategoryPicker = false,
   isSelected,
   isDragOverlay,
@@ -1062,6 +1090,7 @@ function TaskCardContent({
   onCategoryClick,
   onChangeCategory,
   onSetCategoryColor,
+  onRememberCustomColor,
   onRenameCategory,
   onToggleInProgress,
   onOpenNotes,
@@ -1072,6 +1101,7 @@ function TaskCardContent({
   const [pickerNewCatDraft, setPickerNewCatDraft] = useState<string | null>(null);
   const [renamingCatInPicker, setRenamingCatInPicker] = useState<string | null>(null);
   const [renameCatDraft, setRenameCatDraft] = useState("");
+  const [directColorOpen, setDirectColorOpen] = useState(false);
   const isEditing = editing?.id === item.id;
   const pickerRef = useRef<HTMLDivElement>(null);
 
@@ -1157,9 +1187,25 @@ function TaskCardContent({
           className="task-meta"
           type="button"
           onClick={handleCategoryClick}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setDirectColorOpen((v) => !v);
+          }}
         >
           {item.category}
         </button>
+        {directColorOpen && (
+          <InlineColorPopover
+            anchorSelector=".task-meta"
+            wrapperRef={pickerRef}
+            currentColor={color}
+            customColors={customColors}
+            onPick={(c) => onSetCategoryColor?.(item.category, c)}
+            onCommitCustom={(c) => onRememberCustomColor?.(c)}
+            onClose={() => setDirectColorOpen(false)}
+          />
+        )}
         {item.notes.trim() && (
           <span className="notes-indicator">notes</span>
         )}
@@ -1218,12 +1264,11 @@ function TaskCardContent({
                   <ColorEditButton
                     category={cat}
                     currentColor={categoryColor(cat, categoryColors)}
+                    customColors={customColors}
                     isOpen={editingColorFor === cat}
                     onToggle={() => setEditingColorFor(editingColorFor === cat ? null : cat)}
-                    onPick={(c) => {
-                      onSetCategoryColor?.(cat, c);
-                      setEditingColorFor(null);
-                    }}
+                    onPick={(c) => onSetCategoryColor?.(cat, c)}
+                    onCommitCustom={(c) => onRememberCustomColor?.(c)}
                   />
                 </div>
               );
@@ -1503,20 +1548,189 @@ function ProjectSelect({
   );
 }
 
+function SidebarCategoryRow({
+  category,
+  color,
+  customColors,
+  count,
+  isActive,
+  isColorPickerOpen,
+  onSelect,
+  onStartRename,
+  onToggleColorPicker,
+  onCloseColorPicker,
+  onPickColor,
+}: {
+  category: string;
+  color: string;
+  customColors: string[];
+  count: number;
+  isActive: boolean;
+  isColorPickerOpen: boolean;
+  onSelect: () => void;
+  onStartRename: () => void;
+  onToggleColorPicker: () => void;
+  onCloseColorPicker: () => void;
+  onPickColor: (color: string) => void;
+  onCommitCustomColor: (color: string) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <div
+      ref={rowRef}
+      className={isActive ? "sidebar-link sidebar-category-row active" : "sidebar-link sidebar-category-row"}
+      onContextMenu={(e) => { e.preventDefault(); onStartRename(); }}
+    >
+      <button
+        type="button"
+        className="category-dot-btn"
+        onClick={(e) => { e.stopPropagation(); onToggleColorPicker(); }}
+        aria-label={`Change color for ${category}`}
+      >
+        <span className="category-dot" style={{ background: color }} />
+      </button>
+      <button
+        type="button"
+        className="sidebar-category-label-btn"
+        onClick={() => { onCloseColorPicker(); onSelect(); }}
+      >
+        <span className="sidebar-category-label-text">{category}</span>
+        <span>{count}</span>
+      </button>
+      {isColorPickerOpen && (
+        <InlineColorPopover
+          anchorSelector=".category-dot-btn"
+          wrapperRef={rowRef}
+          currentColor={color}
+          customColors={customColors}
+          onPick={onPickColor}
+          onCommitCustom={onCommitCustomColor}
+          onClose={onCloseColorPicker}
+        />
+      )}
+    </div>
+  );
+}
+
+function InlineColorPopover({
+  anchorSelector,
+  wrapperRef,
+  currentColor,
+  customColors,
+  onPick,
+  onCommitCustom,
+  onClose,
+}: {
+  anchorSelector: string;
+  wrapperRef: React.RefObject<HTMLDivElement>;
+  currentColor: string;
+  customColors: string[];
+  onPick: (color: string) => void;
+  onCommitCustom: (color: string) => void;
+  onClose: () => void;
+}) {
+  const nativeInputRef = useRef<HTMLInputElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const commitTimerRef = useRef<number | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    const anchor = wrapperRef.current?.querySelector<HTMLElement>(anchorSelector);
+    if (!anchor) return;
+    const rect = anchor.getBoundingClientRect();
+    setCoords({ top: rect.bottom + 6, left: rect.left });
+  }, [anchorSelector, wrapperRef]);
+
+  useEffect(() => () => {
+    if (commitTimerRef.current) window.clearTimeout(commitTimerRef.current);
+  }, []);
+
+  useEffect(() => {
+    function handleOutside(e: PointerEvent) {
+      if (popoverRef.current?.contains(e.target as Node)) return;
+      if (wrapperRef.current?.contains(e.target as Node)) return;
+      onClose();
+    }
+    window.addEventListener("pointerdown", handleOutside, true);
+    return () => window.removeEventListener("pointerdown", handleOutside, true);
+  }, [onClose, wrapperRef]);
+
+  if (!coords) return null;
+
+  const renderSwatch = (c: string) => (
+    <button
+      key={c}
+      className={currentColor.toLowerCase() === c.toLowerCase() ? "color-swatch active" : "color-swatch"}
+      type="button"
+      style={{ background: c }}
+      onClick={(e) => { e.stopPropagation(); onPick(c); }}
+      aria-label={c}
+    />
+  );
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      className="color-swatch-picker"
+      style={{ position: "fixed", top: coords.top, left: coords.left }}
+      onClick={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {customColors.length > 0 && (
+        <>
+          <div className="color-swatch-row">{customColors.map(renderSwatch)}</div>
+          <div className="color-swatch-divider" />
+        </>
+      )}
+      <div className="color-swatch-row">{colorPalette.map(renderSwatch)}</div>
+      <div className="color-swatch-divider" />
+      <button
+        className="color-swatch-more"
+        type="button"
+        onClick={(e) => { e.stopPropagation(); nativeInputRef.current?.click(); }}
+      >
+        <span className="color-swatch-more-swatch" />
+        Show more colors…
+      </button>
+      <input
+        ref={nativeInputRef}
+        type="color"
+        className="color-swatch-native-input"
+        defaultValue={currentColor}
+        onChange={(e) => {
+          const val = e.target.value;
+          onPick(val);
+          if (commitTimerRef.current) window.clearTimeout(commitTimerRef.current);
+          commitTimerRef.current = window.setTimeout(() => onCommitCustom(val), 700);
+        }}
+        onClick={(e) => e.stopPropagation()}
+      />
+    </div>,
+    document.body,
+  );
+}
+
 function ColorEditButton({
   category,
   currentColor,
+  customColors,
   isOpen,
   onToggle,
   onPick,
+  onCommitCustom,
 }: {
   category: string;
   currentColor: string;
+  customColors: string[];
   isOpen: boolean;
   onToggle: () => void;
   onPick: (color: string) => void;
+  onCommitCustom: (color: string) => void;
 }) {
   const btnRef = useRef<HTMLButtonElement>(null);
+  const nativeInputRef = useRef<HTMLInputElement>(null);
+  const commitTimerRef = useRef<number | null>(null);
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
@@ -1527,6 +1741,17 @@ function ColorEditButton({
     const rect = btnRef.current.getBoundingClientRect();
     setCoords({ top: rect.top, left: rect.right + 6 });
   }, [isOpen]);
+
+  const renderSwatch = (c: string) => (
+    <button
+      key={c}
+      className={currentColor.toLowerCase() === c.toLowerCase() ? "color-swatch active" : "color-swatch"}
+      type="button"
+      style={{ background: c }}
+      onClick={(e) => { e.stopPropagation(); onPick(c); }}
+      aria-label={c}
+    />
+  );
 
   return (
     <>
@@ -1546,16 +1771,39 @@ function ColorEditButton({
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {colorPalette.map((c) => (
-            <button
-              key={c}
-              className={currentColor === c ? "color-swatch active" : "color-swatch"}
-              type="button"
-              style={{ background: c }}
-              onClick={(e) => { e.stopPropagation(); onPick(c); }}
-              aria-label={c}
-            />
-          ))}
+          {customColors.length > 0 && (
+            <>
+              <div className="color-swatch-row">
+                {customColors.map(renderSwatch)}
+              </div>
+              <div className="color-swatch-divider" />
+            </>
+          )}
+          <div className="color-swatch-row">
+            {colorPalette.map(renderSwatch)}
+          </div>
+          <div className="color-swatch-divider" />
+          <button
+            className="color-swatch-more"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); nativeInputRef.current?.click(); }}
+          >
+            <span className="color-swatch-more-swatch" />
+            Show more colors…
+          </button>
+          <input
+            ref={nativeInputRef}
+            type="color"
+            className="color-swatch-native-input"
+            defaultValue={currentColor}
+            onChange={(e) => {
+              const val = e.target.value;
+              onPick(val);
+              if (commitTimerRef.current) window.clearTimeout(commitTimerRef.current);
+              commitTimerRef.current = window.setTimeout(() => onCommitCustom(val), 700);
+            }}
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>,
         document.body,
       )}

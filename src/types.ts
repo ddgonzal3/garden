@@ -17,6 +17,7 @@ export type GardenProject = {
   name: string;
   categories: string[];
   categoryColors: Record<string, string>;
+  customColors: string[];
   items: GardenItem[];
   priorityBucketCount: number;
   bucketNames: string[];
