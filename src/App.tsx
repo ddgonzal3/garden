@@ -56,6 +56,7 @@ function App() {
   const [categoryDraft, setCategoryDraft] = useState("");
   const [renamingCategory, setRenamingCategory] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
+  const [notesItemId, setNotesItemId] = useState<string | null>(null);
   const [addingProject, setAddingProject] = useState(false);
   const [projectDraft, setProjectDraft] = useState("");
   const undoStackRef = useRef<GardenProject[]>([]);
@@ -298,6 +299,10 @@ function App() {
       ...item,
       status: item.status === "inProgress" ? "idle" : "inProgress",
     }));
+  }
+
+  function setItemNotes(itemId: string, notes: string) {
+    updateItem(itemId, (item) => ({ ...item, notes }));
   }
 
   function deleteItem(itemId: string) {
@@ -775,6 +780,7 @@ function App() {
                               onSetCategoryColor={setCategoryColor}
                               onRenameCategory={renameCategory}
                               onToggleInProgress={toggleInProgress}
+                              onOpenNotes={(id) => setNotesItemId(id)}
                               onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
                             />
                           ))}
@@ -812,6 +818,7 @@ function App() {
                       onSetCategoryColor={setCategoryColor}
                       onRenameCategory={renameCategory}
                       onToggleInProgress={toggleInProgress}
+                      onOpenNotes={(id) => setNotesItemId(id)}
                       onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
                     />
                   ))}
@@ -834,6 +841,19 @@ function App() {
           </DragOverlay>
         </DndContext>
       </main>
+      {notesItemId && (() => {
+        const item = activeProject.items.find((i) => i.id === notesItemId);
+        if (!item) return null;
+        return (
+          <NotesModal
+            key={item.id}
+            title={item.title || "Untitled task"}
+            notes={item.notes}
+            onChange={(val) => setItemNotes(item.id, val)}
+            onClose={() => setNotesItemId(null)}
+          />
+        );
+      })()}
     </div>
   );
 }
@@ -926,6 +946,7 @@ type SortableTaskCardProps = {
   onSetCategoryColor: (category: string, color: string) => void;
   onRenameCategory: (oldName: string, newName: string) => void;
   onToggleInProgress: (itemId: string) => void;
+  onOpenNotes: (itemId: string) => void;
   onCloseCategoryPicker: () => void;
 };
 
@@ -947,6 +968,7 @@ function SortableTaskCard({
   onSetCategoryColor,
   onRenameCategory,
   onToggleInProgress,
+  onOpenNotes,
   onCloseCategoryPicker,
 }: SortableTaskCardProps) {
   const {
@@ -986,6 +1008,7 @@ function SortableTaskCard({
         onSetCategoryColor={onSetCategoryColor}
         onRenameCategory={onRenameCategory}
         onToggleInProgress={onToggleInProgress}
+        onOpenNotes={onOpenNotes}
         onCloseCategoryPicker={onCloseCategoryPicker}
       />
     </div>
@@ -1012,6 +1035,7 @@ type TaskCardContentProps = {
   onSetCategoryColor?: (category: string, color: string) => void;
   onRenameCategory?: (oldName: string, newName: string) => void;
   onToggleInProgress?: (itemId: string) => void;
+  onOpenNotes?: (itemId: string) => void;
   onCloseCategoryPicker?: () => void;
 };
 
@@ -1033,6 +1057,7 @@ function TaskCardContent({
   onSetCategoryColor,
   onRenameCategory,
   onToggleInProgress,
+  onOpenNotes,
   onCloseCategoryPicker,
 }: TaskCardContentProps) {
   const color = categoryColor(item.category, categoryColors);
@@ -1078,13 +1103,14 @@ function TaskCardContent({
 
   function handleClick(event: React.MouseEvent) {
     event.stopPropagation();
-    if (!isEditing) {
-      onSelect?.(item.id);
-    }
+    if (isEditing) return;
+    onSelect?.(item.id);
+    onOpenNotes?.(item.id);
   }
 
-  function handleDoubleClick(event: React.MouseEvent) {
+  function handleTitleClick(event: React.MouseEvent) {
     event.stopPropagation();
+    if (isEditing) return;
     onEditChange?.({ id: item.id, draft: item.title });
   }
 
@@ -1108,22 +1134,15 @@ function TaskCardContent({
       className={classNames}
       style={{ ["--card-accent" as string]: color }}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
     >
       {isEditing ? (
-        <form onSubmit={submitEdit}>
-          <input
-            autoFocus
-            className="task-input"
-            value={editing.draft}
-            onChange={(event) => onEditChange?.({ id: item.id, draft: event.target.value })}
-            onBlur={() => onCommitEdit?.(item.id)}
-            onKeyDown={handleKeyDown}
-            placeholder="New item..."
-          />
-        </form>
+        <TitleEditor
+          value={editing.draft}
+          onChange={(val) => onEditChange?.({ id: item.id, draft: val })}
+          onCommit={() => onCommitEdit?.(item.id)}
+        />
       ) : (
-        <h2 className="task-title">{item.title || "Untitled task"}</h2>
+        <h2 className="task-title" onClick={handleTitleClick}>{item.title || "Untitled task"}</h2>
       )}
 
       <div className="task-meta-wrapper" ref={pickerRef}>
@@ -1134,6 +1153,9 @@ function TaskCardContent({
         >
           {item.category}
         </button>
+        {item.notes.trim() && (
+          <span className="notes-indicator">notes</span>
+        )}
         {showCategoryPicker && (
           <div className="category-picker">
             {categories.map((cat) => {
@@ -1252,6 +1274,120 @@ function TaskCardContent({
         </button>
       )}
     </article>
+  );
+}
+
+function TitleEditor({
+  value,
+  onChange,
+  onCommit,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onCommit: () => void;
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    const end = el.value.length;
+    el.setSelectionRange(end, end);
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+
+  return (
+    <textarea
+      ref={ref}
+      className="task-title-input"
+      value={value}
+      rows={1}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          onCommit();
+        } else if (e.key === "Escape") {
+          onCommit();
+        }
+      }}
+      onClick={(e) => e.stopPropagation()}
+      placeholder="Untitled task"
+    />
+  );
+}
+
+function NotesModal({
+  title,
+  notes,
+  onChange,
+  onClose,
+}: {
+  title: string;
+  notes: string;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    function handleKey(e: globalThis.KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", handleKey, true);
+    return () => window.removeEventListener("keydown", handleKey, true);
+  }, [onClose]);
+
+  // Place cursor at end of existing notes on open
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const end = el.value.length;
+    el.focus();
+    el.setSelectionRange(end, end);
+  }, []);
+
+  return createPortal(
+    <div className="notes-backdrop" onMouseDown={onClose}>
+      <div
+        className="notes-panel"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="notes-header">
+          <h2 className="notes-title">{title}</h2>
+          <button
+            className="notes-close"
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+              <path d="M3.5 3.5L12.5 12.5M12.5 3.5L3.5 12.5" />
+            </svg>
+          </button>
+        </div>
+        <textarea
+          ref={textareaRef}
+          className="notes-textarea"
+          value={notes}
+          placeholder="notes"
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
+    </div>,
+    document.body,
   );
 }
 
