@@ -1,6 +1,5 @@
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { FormEvent, KeyboardEvent } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -768,7 +767,6 @@ function App() {
                       key={bucket}
                       bucket={bucket}
                       label={bucketLabel(activeProject, bucket)}
-                      itemCount={bucketItems.length}
                       onAddItem={createNewItem}
                       onRename={renameBucket}
                     >
@@ -784,8 +782,6 @@ function App() {
                               editing={editing}
                               categories={activeProject.categories}
                               categoryColors={activeProject.categoryColors}
-                customColors={activeProject.customColors}
-                      customColors={activeProject.customColors}
                               customColors={activeProject.customColors}
                               categoryPickerItemId={categoryPickerItemId}
                               isSelected={selectedId === item.id}
@@ -798,7 +794,6 @@ function App() {
                               onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
                               onChangeCategory={changeCategory}
                               onSetCategoryColor={setCategoryColor}
-                      onRememberCustomColor={rememberCustomColor}
                               onRememberCustomColor={rememberCustomColor}
                               onRenameCategory={renameCategory}
                               onToggleInProgress={toggleInProgress}
@@ -827,7 +822,6 @@ function App() {
                       editing={editing}
                       categories={activeProject.categories}
                       categoryColors={activeProject.categoryColors}
-                customColors={activeProject.customColors}
                       customColors={activeProject.customColors}
                       categoryPickerItemId={categoryPickerItemId}
                       isSelected={selectedId === item.id}
@@ -889,14 +883,12 @@ function App() {
 function DroppableColumn({
   bucket,
   label,
-  itemCount,
   onAddItem,
   onRename,
   children,
 }: {
   bucket: number;
   label: string;
-  itemCount: number;
   onAddItem: (bucket: number) => void;
   onRename: (bucket: number, name: string) => void;
   children: React.ReactNode;
@@ -1126,17 +1118,6 @@ function TaskCardContent({
   ]
     .filter(Boolean)
     .join(" ");
-
-  function submitEdit(event: FormEvent) {
-    event.preventDefault();
-    onCommitEdit?.(item.id);
-  }
-
-  function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Escape") {
-      onCommitEdit?.(item.id);
-    }
-  }
 
   function handleClick(event: React.MouseEvent) {
     event.stopPropagation();
@@ -1560,6 +1541,7 @@ function SidebarCategoryRow({
   onToggleColorPicker,
   onCloseColorPicker,
   onPickColor,
+  onCommitCustomColor,
 }: {
   category: string;
   color: string;
@@ -1623,7 +1605,7 @@ function InlineColorPopover({
   onClose,
 }: {
   anchorSelector: string;
-  wrapperRef: React.RefObject<HTMLDivElement>;
+  wrapperRef: React.RefObject<HTMLDivElement | null>;
   currentColor: string;
   customColors: string[];
   onPick: (color: string) => void;
