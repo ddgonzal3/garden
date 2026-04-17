@@ -901,7 +901,6 @@ function DroppableColumn({
           +
         </button>
       </div>
-      <div className="column-rule" />
       {children}
     </div>
   );

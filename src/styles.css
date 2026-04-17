@@ -133,10 +133,10 @@ button {
   top: 50%;
   transform: translate(-50%, -50%);
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  color: var(--text-strong);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-mid);
   pointer-events: none;
   user-select: none;
   max-width: 60%;
@@ -414,10 +414,11 @@ button {
 .workspace {
   grid-column: 2;
   grid-row: 1 / -1;
-  padding: 68px 18px 18px;
+  padding: 60px 18px 18px;
   display: grid;
   grid-template-rows: 1fr;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
   background: var(--bg);
 }
@@ -478,6 +479,7 @@ h1 {
 
 .board-shell {
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -492,14 +494,15 @@ h1 {
   display: flex;
   gap: 4px;
   height: 100%;
-  overflow-x: auto;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: hidden;
   padding-bottom: 4px;
 }
 
 .column {
   flex: 1 1 0;
-  min-width: 235px;
+  min-width: 0;
   overflow: visible;
   display: flex;
   min-height: 0;
@@ -533,13 +536,22 @@ h1 {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 8px 10px;
+  padding: 4px 8px 4px;
 }
 
 .column-title {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-mid);
+  cursor: default;
+  transition: color 120ms ease;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.column-title:hover {
   color: var(--text-strong);
 }
 
@@ -563,17 +575,12 @@ h1 {
   color: var(--text-strong);
 }
 
-.column-rule {
-  height: 1px;
-  margin: 0 4px;
-  background: var(--line-strong);
-}
 
 .stack {
   display: grid;
   gap: 10px;
   align-content: start;
-  padding: 10px 4px;
+  padding: 4px 4px 10px;
   flex: 1;
   overflow-y: auto;
   min-height: 0;
@@ -598,6 +605,7 @@ h1 {
   display: grid;
   gap: 10px;
   padding: 15px 16px 14px;
+  min-width: 0;
   border-radius: 13px;
   background: color-mix(in srgb, var(--card-accent) 32%, var(--card-base));
   border: 1px solid color-mix(in srgb, var(--card-accent) 22%, var(--line-strong));
@@ -738,6 +746,9 @@ h1 {
   letter-spacing: -0.03em;
   font-weight: 650;
   color: var(--text-strong);
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .task-meta-wrapper {
