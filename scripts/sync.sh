@@ -3,7 +3,7 @@ set -e
 cd "$(dirname "$0")/.."
 
 branch=$(git symbolic-ref --short HEAD 2>/dev/null)
-main=$(git config rally.syncBranch 2>/dev/null || true)
+main=$(git config garden.syncBranch 2>/dev/null || true)
 if [ -z "$main" ]; then
   main=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')
 fi

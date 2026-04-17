@@ -1,7 +1,7 @@
 {
   "productName": "Garden",
   "version": "0.1.0",
-  "identifier": "com.splice.garden",
+  "identifier": "com.danny.garden",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://127.0.0.1:5173",
