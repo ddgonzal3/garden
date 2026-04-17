@@ -57,7 +57,7 @@ button {
   height: 100vh;
   display: grid;
   grid-template-columns: 250px 1fr;
-  grid-template-rows: 60px 1fr;
+  grid-template-rows: 46px 1fr;
   gap: 0;
   padding: 0;
   overflow: hidden;
@@ -84,8 +84,8 @@ button {
 .titlebar {
   grid-column: 1 / -1;
   grid-row: 1;
-  height: 60px;
-  min-height: 60px;
+  height: 46px;
+  min-height: 46px;
   -webkit-app-region: drag;
   -webkit-user-select: none;
   user-select: none;
@@ -96,11 +96,11 @@ button {
 .sidebar-toggle {
   -webkit-app-region: no-drag;
   position: absolute;
-  left: 124px;
+  left: 90px;
   top: 50%;
   transform: translateY(-50%);
-  width: 34px;
-  height: 30px;
+  width: 30px;
+  height: 26px;
   display: grid;
   place-items: center;
   padding: 0;
@@ -195,7 +195,7 @@ button {
   display: grid;
   align-content: start;
   gap: 18px;
-  padding: 68px 16px 16px;
+  padding: 54px 16px 16px;
   border-radius: 0;
   overflow-y: auto;
   min-height: 0;
@@ -536,7 +536,7 @@ button {
   position: relative;
   grid-column: 2;
   grid-row: 1 / -1;
-  padding: 54px 18px 18px;
+  padding: 42px 18px 18px;
   display: grid;
   grid-template-rows: 1fr;
   min-height: 0;
@@ -900,6 +900,16 @@ h1 {
   -webkit-user-select: text;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.task-title-input::selection {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+.task-title-input::-moz-selection {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
 }
 
 .task-meta-wrapper {

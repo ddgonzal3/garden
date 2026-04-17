@@ -38,6 +38,7 @@ import type { Backlog, GardenItem, GardenProject, SidebarSelection } from "./typ
 type EditingState = {
   id: string;
   draft: string;
+  selectAll?: boolean;
 };
 
 function App() {
@@ -1017,6 +1018,7 @@ function SortableTaskCard({
   onOpenNotes,
   onCloseCategoryPicker,
 }: SortableTaskCardProps) {
+  const isRenaming = editing?.id === item.id;
   const {
     attributes,
     listeners,
@@ -1024,7 +1026,7 @@ function SortableTaskCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id });
+  } = useSortable({ id: item.id, disabled: isRenaming });
 
   const showPicker = categoryPickerItemId === item.id;
   const style: React.CSSProperties = {
@@ -1034,8 +1036,10 @@ function SortableTaskCard({
     zIndex: showPicker ? 50 : undefined,
   };
 
+  const dragProps = isRenaming ? {} : { ...attributes, ...listeners };
+
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} {...dragProps}>
       <TaskCardContent
         item={item}
         editing={editing}
@@ -1150,10 +1154,29 @@ function TaskCardContent({
     onOpenNotes?.(item.id);
   }
 
+  const titleClickTimerRef = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (titleClickTimerRef.current) window.clearTimeout(titleClickTimerRef.current);
+  }, []);
+
   function handleTitleClick(event: React.MouseEvent) {
     event.stopPropagation();
     if (isEditing) return;
-    onEditChange?.({ id: item.id, draft: item.title });
+    if (titleClickTimerRef.current) return;
+    titleClickTimerRef.current = window.setTimeout(() => {
+      titleClickTimerRef.current = null;
+      onEditChange?.({ id: item.id, draft: item.title });
+    }, 220);
+  }
+
+  function handleTitleDoubleClick(event: React.MouseEvent) {
+    event.stopPropagation();
+    if (titleClickTimerRef.current) {
+      window.clearTimeout(titleClickTimerRef.current);
+      titleClickTimerRef.current = null;
+    }
+    if (isEditing) return;
+    onEditChange?.({ id: item.id, draft: item.title, selectAll: true });
   }
 
   function handleCategoryClick(event: React.MouseEvent) {
@@ -1180,11 +1203,16 @@ function TaskCardContent({
       {isEditing ? (
         <TitleEditor
           value={editing.draft}
+          selectAll={editing.selectAll}
           onChange={(val) => onEditChange?.({ id: item.id, draft: val })}
           onCommit={() => onCommitEdit?.(item.id)}
         />
       ) : (
-        <h2 className="task-title" onClick={handleTitleClick}>{item.title || "Untitled task"}</h2>
+        <h2
+          className="task-title"
+          onClick={handleTitleClick}
+          onDoubleClick={handleTitleDoubleClick}
+        >{item.title || "Untitled task"}</h2>
       )}
 
       <div className="task-meta-wrapper" ref={pickerRef}>
@@ -1338,10 +1366,12 @@ function TaskCardContent({
 
 function TitleEditor({
   value,
+  selectAll = false,
   onChange,
   onCommit,
 }: {
   value: string;
+  selectAll?: boolean;
   onChange: (v: string) => void;
   onCommit: () => void;
 }) {
@@ -1352,7 +1382,11 @@ function TitleEditor({
     if (!el) return;
     el.focus();
     const end = el.value.length;
-    el.setSelectionRange(end, end);
+    if (selectAll) {
+      el.setSelectionRange(0, end);
+    } else {
+      el.setSelectionRange(end, end);
+    }
   }, []);
 
   useEffect(() => {
