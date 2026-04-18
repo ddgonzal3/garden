@@ -1,6 +1,6 @@
 {
     "statusBar": [
-        "debug.sh",
+        "watch-fe.sh",
         "release.sh"
     ],
     "statusBarRight": [

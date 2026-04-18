@@ -13,7 +13,7 @@ You plant things, tend to them, some grow into priorities, some you prune. Tasks
 ## Build & Run
 
 ```bash
-./scripts/debug.sh      # dev: debug build + Vite HMR
+./scripts/watch-fe.sh   # dev: debug build + Vite HMR
 ./scripts/run.sh        # debug build + launch .app
 ./scripts/release.sh    # optimized release build
 ./scripts/reload.sh     # smart reload (webview or full rebuild)
