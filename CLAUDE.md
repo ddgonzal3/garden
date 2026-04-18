@@ -16,13 +16,13 @@ A macOS Tauri desktop task manager (React + Vite frontend, Rust backend).
 ## Build & Run
 
 ```bash
-./scripts/watch-fe.sh   # Dev mode: debug build + Vite hot-reload (CSS/TSX changes are instant)
+./scripts/debug.sh   # Dev mode: debug build + Vite hot-reload (CSS/TSX changes are instant)
 ./scripts/run.sh        # Debug build + launch .app
 ./scripts/release.sh    # Release build + launch .app (optimized)
 ./scripts/reload.sh     # Smart reload: triggers webview reload if watcher running, else falls back to run.sh
 ```
 
-**For design iteration**, use `watch-fe.sh` — it runs `cargo tauri dev` so frontend changes reflect instantly without restarting.
+**For design iteration**, use `debug.sh` — it runs `cargo tauri dev` so frontend changes reflect instantly without restarting.
 
 **To use the app**, use `run.sh` (debug, faster compile) or `release.sh` (optimized).
 
@@ -30,7 +30,7 @@ A macOS Tauri desktop task manager (React + Vite frontend, Rust backend).
 
 ## After Making Changes
 
-**Do NOT automatically reload or restart the app.** When `watch-fe.sh` is running, Vite HMR picks up CSS/TSX changes instantly — no action needed. If the user needs a full rebuild, they'll run `run.sh` themselves.
+**Do NOT automatically reload or restart the app.** When `debug.sh` is running, Vite HMR picks up CSS/TSX changes instantly — no action needed. If the user needs a full rebuild, they'll run `run.sh` themselves.
 
 ## Conventions
 

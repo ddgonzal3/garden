@@ -1,0 +1,9 @@
+{
+    "statusBar": [
+        "debug.sh",
+        "release.sh"
+    ],
+    "statusBarRight": [
+        "sync.sh"
+    ]
+}
