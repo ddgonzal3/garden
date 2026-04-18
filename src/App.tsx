@@ -314,10 +314,49 @@ function App() {
   }
 
   function toggleInProgress(itemId: string) {
-    updateItem(itemId, (item) => ({
-      ...item,
-      status: item.status === "inProgress" ? "idle" : "inProgress",
-    }));
+    mutateActiveProject((project) => {
+      const target = project.items.find((i) => i.id === itemId);
+      if (!target) return project;
+      const willBeInProgress = target.status !== "inProgress";
+
+      // When activating, also move the item to the leftmost bucket (index 0).
+      const targetBucket = willBeInProgress ? 0 : target.priorityBucket;
+      let items = project.items.map((i) =>
+        i.id === itemId
+          ? {
+              ...i,
+              status: willBeInProgress ? ("inProgress" as const) : ("idle" as const),
+              priorityBucket: targetBucket,
+            }
+          : i,
+      );
+
+      if (willBeInProgress) {
+        // Slot the newly-activated item right after existing in-progress items
+        // at the top of its bucket; idle items push down.
+        const bucket = targetBucket;
+        const bucketActive = items
+          .filter((i) => i.priorityBucket === bucket && i.completedAt === null)
+          .sort((a, b) => a.priority - b.priority);
+        const current = bucketActive.find((i) => i.id === itemId);
+        if (current) {
+          const inProgressOthers = bucketActive.filter(
+            (i) => i.status === "inProgress" && i.id !== itemId,
+          );
+          const idleOthers = bucketActive.filter(
+            (i) => i.status !== "inProgress" && i.id !== itemId,
+          );
+          const reordered = [...inProgressOthers, current, ...idleOthers];
+          const priorityMap = new Map<string, number>();
+          reordered.forEach((item, idx) => priorityMap.set(item.id, idx));
+          items = items.map((i) =>
+            priorityMap.has(i.id) ? { ...i, priority: priorityMap.get(i.id)! } : i,
+          );
+        }
+      }
+
+      return { ...project, items };
+    });
   }
 
   function setItemNotes(itemId: string, notes: string) {
@@ -1026,7 +1065,14 @@ function SortableTaskCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: item.id, disabled: isRenaming });
+  } = useSortable({
+    id: item.id,
+    disabled: isRenaming,
+    transition: {
+      duration: 450,
+      easing: "cubic-bezier(0.32, 0.72, 0.25, 1)",
+    },
+  });
 
   const showPicker = categoryPickerItemId === item.id;
   const style: React.CSSProperties = {
