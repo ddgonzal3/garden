@@ -48,7 +48,7 @@ export function categoryColor(
   return colorPalette[Math.abs(hash) % colorPalette.length];
 }
 
-export const DEFAULT_BUCKET_NAMES = ["Now", "Later", "Someday"];
+export const DEFAULT_BUCKET_NAMES = ["Now", "Later", "Someday", "Vibes"];
 
 export function bucketLabel(project: GardenProject, bucket: number): string {
   return project.bucketNames[bucket] ?? `P${bucket + 1}`;
@@ -62,7 +62,7 @@ export function createProject(name: string): GardenProject {
     categoryColors: {},
     customColors: [],
     items: [],
-    priorityBucketCount: 3,
+    priorityBucketCount: 4,
     bucketNames: [...DEFAULT_BUCKET_NAMES],
   };
 }
