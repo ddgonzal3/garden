@@ -11,12 +11,12 @@ import {
 import type { DragStartEvent, DragOverEvent, DragEndEvent } from "@dnd-kit/core";
 import {
   arrayMove,
+  horizontalListSortingStrategy,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useDroppable } from "@dnd-kit/core";
 import {
   bucketLabel,
   categoryColor,
@@ -60,6 +60,7 @@ function App() {
   const [notesItemId, setNotesItemId] = useState<string | null>(null);
   const [addingProject, setAddingProject] = useState(false);
   const [projectDraft, setProjectDraft] = useState("");
+  const [columnMenu, setColumnMenu] = useState<{ bucket: number; x: number; y: number } | null>(null);
   const undoStackRef = useRef<GardenProject[]>([]);
   const dragStartBucketRef = useRef<number | null>(null);
 
@@ -319,22 +320,15 @@ function App() {
       if (!target) return project;
       const willBeInProgress = target.status !== "inProgress";
 
-      // When activating, also move the item to the leftmost bucket (index 0).
-      const targetBucket = willBeInProgress ? 0 : target.priorityBucket;
       let items = project.items.map((i) =>
         i.id === itemId
-          ? {
-              ...i,
-              status: willBeInProgress ? ("inProgress" as const) : ("idle" as const),
-              priorityBucket: targetBucket,
-            }
+          ? { ...i, status: willBeInProgress ? ("inProgress" as const) : ("idle" as const) }
           : i,
       );
 
       if (willBeInProgress) {
-        // Slot the newly-activated item right after existing in-progress items
-        // at the top of its bucket; idle items push down.
-        const bucket = targetBucket;
+        // Float to top of current bucket (in-progress above idle).
+        const bucket = target.priorityBucket;
         const bucketActive = items
           .filter((i) => i.priorityBucket === bucket && i.completedAt === null)
           .sort((a, b) => a.priority - b.priority);
@@ -428,6 +422,73 @@ function App() {
       const next = [...project.bucketNames];
       next[bucket] = trimmed;
       return { ...project, bucketNames: next };
+    });
+  }
+
+  function addColumn() {
+    mutateActiveProject((project) => {
+      const nextIdx = project.priorityBucketCount;
+      return {
+        ...project,
+        priorityBucketCount: nextIdx + 1,
+        bucketNames: [...project.bucketNames, `P${nextIdx + 1}`],
+      };
+    });
+  }
+
+  function deleteColumn(bucket: number) {
+    mutateActiveProject((project) => {
+      if (project.priorityBucketCount <= 1) return project;
+      const neighbor = bucket > 0 ? bucket - 1 : bucket + 1;
+
+      const neighborMaxPriority = project.items
+        .filter((i) => i.priorityBucket === neighbor && i.completedAt === null)
+        .reduce((m, i) => Math.max(m, i.priority), -1);
+
+      let priorityCounter = neighborMaxPriority + 1;
+      const items = project.items.map((item) => {
+        let nextBucket = item.priorityBucket;
+        let nextPriority = item.priority;
+
+        if (item.priorityBucket === bucket) {
+          nextBucket = neighbor;
+          if (item.completedAt === null) {
+            nextPriority = priorityCounter++;
+          }
+        }
+
+        if (nextBucket > bucket) nextBucket -= 1;
+
+        return { ...item, priorityBucket: nextBucket, priority: nextPriority };
+      });
+
+      const bucketNames = project.bucketNames.filter((_, i) => i !== bucket);
+
+      return {
+        ...project,
+        priorityBucketCount: project.priorityBucketCount - 1,
+        bucketNames,
+        items,
+      };
+    });
+  }
+
+  function reorderColumns(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
+    mutateActiveProject((project) => {
+      const bucketNames = arrayMove(project.bucketNames, fromIdx, toIdx);
+
+      const oldOrder = project.bucketNames.map((_, i) => i);
+      const newOrder = arrayMove(oldOrder, fromIdx, toIdx);
+      const indexMap = new Map<number, number>();
+      newOrder.forEach((oldIdx, newIdx) => indexMap.set(oldIdx, newIdx));
+
+      const items = project.items.map((item) => ({
+        ...item,
+        priorityBucket: indexMap.get(item.priorityBucket) ?? item.priorityBucket,
+      }));
+
+      return { ...project, bucketNames, items };
     });
   }
 
@@ -586,6 +647,12 @@ function App() {
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
     const activeId = String(event.active.id);
+    const dragType = event.active.data.current?.type;
+    if (dragType === "column") {
+      setActiveDragId(activeId);
+      dragStartBucketRef.current = null;
+      return;
+    }
     setActiveDragId(activeId);
     const item = activeProject?.items.find((i) => i.id === activeId);
     dragStartBucketRef.current = item?.priorityBucket ?? null;
@@ -594,6 +661,7 @@ function App() {
   const handleDragOver = useCallback((event: DragOverEvent) => {
     const { active, over } = event;
     if (!over || !activeProject) return;
+    if (active.data.current?.type === "column") return;
 
     const activeId = String(active.id);
     const overId = String(over.id);
@@ -602,7 +670,7 @@ function App() {
 
     // Determine target bucket from the over element.
     let targetBucket: number;
-    if (overId.startsWith("column-")) {
+    if (overId.startsWith("col-")) {
       targetBucket = Number.parseInt(overId.split("-")[1], 10);
     } else {
       const overItem = activeProject.items.find((item) => item.id === overId);
@@ -614,7 +682,7 @@ function App() {
     if (targetBucket === activeItem.priorityBucket) return;
 
     // Cross-bucket: move into target bucket near the hovered card (or append).
-    if (overId.startsWith("column-")) {
+    if (overId.startsWith("col-")) {
       moveItemToBucket(activeId, targetBucket);
     } else {
       moveItemBefore(activeId, overId);
@@ -633,11 +701,21 @@ function App() {
     const overId = String(over.id);
     if (activeId === overId) return;
 
+    // Column reorder
+    if (active.data.current?.type === "column" && over.data.current?.type === "column") {
+      const fromIdx = active.data.current?.bucket as number;
+      const toIdx = over.data.current?.bucket as number;
+      if (typeof fromIdx === "number" && typeof toIdx === "number") {
+        reorderColumns(fromIdx, toIdx);
+      }
+      return;
+    }
+
     const activeItem = activeProject.items.find((item) => item.id === activeId);
     if (!activeItem) return;
 
     // Dropped on an empty column — send to end of that bucket.
-    if (overId.startsWith("column-")) {
+    if (overId.startsWith("col-")) {
       const bucket = Number.parseInt(overId.split("-")[1], 10);
       moveItemAfterLast(activeId, bucket);
       return;
@@ -693,6 +771,17 @@ function App() {
           </svg>
           <span>{activeProject.name}</span>
         </div>
+        {selection.type === "priorityBoard" && (
+          <button
+            className="titlebar-add-column"
+            type="button"
+            onClick={(e) => { e.stopPropagation(); addColumn(); }}
+            aria-label="Add column"
+            title="Add column"
+          >
+            +
+          </button>
+        )}
       </div>
       <aside className="sidebar" onClick={(e) => e.stopPropagation()}>
         <ProjectSelect
@@ -815,62 +904,75 @@ function App() {
         >
           {selection.type === "priorityBoard" ? (
             <section className="board-shell">
-              <div className="board">
-                {Array.from({ length: activeProject.priorityBucketCount }, (_, bucket) => {
-                  const bucketItems = getItemsInBucket(activeProject, bucket);
-                  return (
-                    <DroppableColumn
-                      key={bucket}
-                      bucket={bucket}
-                      label={bucketLabel(activeProject, bucket)}
-                      onAddItem={createNewItem}
-                      onRename={renameBucket}
-                    >
-                      <SortableContext
-                        items={bucketItems.map((item) => item.id)}
-                        strategy={verticalListSortingStrategy}
+              <SortableContext
+                items={Array.from(
+                  { length: activeProject.priorityBucketCount },
+                  (_, b) => `col-${b}`,
+                )}
+                strategy={horizontalListSortingStrategy}
+              >
+                <div className="board">
+                  {Array.from({ length: activeProject.priorityBucketCount }, (_, bucket) => {
+                    const bucketItems = getItemsInBucket(activeProject, bucket);
+                    return (
+                      <SortableColumn
+                        key={bucket}
+                        bucket={bucket}
+                        label={bucketLabel(activeProject, bucket)}
+                        isColumnDragging={activeDragId === `col-${bucket}`}
+                        onRename={renameBucket}
+                        onContextMenu={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setColumnMenu({ bucket, x: e.clientX, y: e.clientY });
+                        }}
                       >
-                        <div
-                          className="stack"
-                          onDoubleClick={(e) => {
-                            // Only fire when double-clicking empty stack area, not a card
-                            if (e.target === e.currentTarget) {
-                              createNewItem(bucket, "Uncategorized", "bottom");
-                            }
-                          }}
+                        <SortableContext
+                          items={bucketItems.map((item) => item.id)}
+                          strategy={verticalListSortingStrategy}
                         >
-                          {bucketItems.map((item) => (
-                            <SortableTaskCard
-                              key={item.id}
-                              item={item}
-                              editing={editing}
-                              categories={activeProject.categories}
-                              categoryColors={activeProject.categoryColors}
-                              customColors={activeProject.customColors}
-                              categoryPickerItemId={categoryPickerItemId}
-                              isSelected={selectedId === item.id}
-                              isDragOverlay={false}
-                              isBeingDragged={activeDragId === item.id}
-                              onSelect={(id) => setSelectedId(id)}
-                              onEditChange={setEditing}
-                              onCommitEdit={commitEdit}
-                              onComplete={completeItem}
-                              onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
-                              onChangeCategory={changeCategory}
-                              onSetCategoryColor={setCategoryColor}
-                              onRememberCustomColor={rememberCustomColor}
-                              onRenameCategory={renameCategory}
-                              onToggleInProgress={toggleInProgress}
-                              onOpenNotes={(id) => setNotesItemId(id)}
-                              onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
-                            />
-                          ))}
-                        </div>
-                      </SortableContext>
-                    </DroppableColumn>
-                  );
-                })}
-              </div>
+                          <div
+                            className="stack"
+                            onDoubleClick={(e) => {
+                              // Only fire when double-clicking empty stack area, not a card
+                              if (e.target === e.currentTarget) {
+                                createNewItem(bucket, "Uncategorized", "bottom");
+                              }
+                            }}
+                          >
+                            {bucketItems.map((item) => (
+                              <SortableTaskCard
+                                key={item.id}
+                                item={item}
+                                editing={editing}
+                                categories={activeProject.categories}
+                                categoryColors={activeProject.categoryColors}
+                                customColors={activeProject.customColors}
+                                categoryPickerItemId={categoryPickerItemId}
+                                isSelected={selectedId === item.id}
+                                isDragOverlay={false}
+                                isBeingDragged={activeDragId === item.id}
+                                onSelect={(id) => setSelectedId(id)}
+                                onEditChange={setEditing}
+                                onCommitEdit={commitEdit}
+                                onComplete={completeItem}
+                                onCategoryClick={(id) => setCategoryPickerItemId((cur) => cur === id ? null : id)}
+                                onChangeCategory={changeCategory}
+                                onSetCategoryColor={setCategoryColor}
+                                onRememberCustomColor={rememberCustomColor}
+                                onRenameCategory={renameCategory}
+                                onToggleInProgress={toggleInProgress}
+                                onOpenNotes={(id) => setNotesItemId(id)}
+                                onCloseCategoryPicker={() => setCategoryPickerItemId(null)}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </SortableColumn>
+                    );
+                  })}
+                </div>
+              </SortableContext>
             </section>
           ) : (
             <section className="list-shell">
@@ -938,26 +1040,95 @@ function App() {
           />
         );
       })()}
+      {columnMenu && (
+        <ColumnContextMenu
+          x={columnMenu.x}
+          y={columnMenu.y}
+          canDelete={activeProject.priorityBucketCount > 1}
+          onDelete={() => {
+            deleteColumn(columnMenu.bucket);
+            setColumnMenu(null);
+          }}
+          onClose={() => setColumnMenu(null)}
+        />
+      )}
     </div>
   );
 }
 
-// --- Droppable column wrapper ---
+function ColumnContextMenu({
+  x,
+  y,
+  canDelete,
+  onDelete,
+  onClose,
+}: {
+  x: number;
+  y: number;
+  canDelete: boolean;
+  onDelete: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const handleDown = () => onClose();
+    const handleKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("mousedown", handleDown);
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      window.removeEventListener("mousedown", handleDown);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose]);
 
-function DroppableColumn({
+  return createPortal(
+    <div
+      className="context-menu"
+      style={{ left: x, top: y }}
+      onMouseDown={(e) => e.stopPropagation()}
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <button
+        type="button"
+        className="context-menu-item danger"
+        disabled={!canDelete}
+        onClick={onDelete}
+      >
+        Delete column
+      </button>
+    </div>,
+    document.body,
+  );
+}
+
+// --- Sortable + droppable column wrapper ---
+
+function SortableColumn({
   bucket,
   label,
-  onAddItem,
+  isColumnDragging,
   onRename,
+  onContextMenu,
   children,
 }: {
   bucket: number;
   label: string;
-  onAddItem: (bucket: number) => void;
+  isColumnDragging: boolean;
   onRename: (bucket: number, name: string) => void;
+  onContextMenu: (event: React.MouseEvent) => void;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `column-${bucket}` });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isOver,
+    isDragging,
+  } = useSortable({ id: `col-${bucket}`, data: { type: "column", bucket } });
+
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(label);
 
@@ -968,12 +1139,20 @@ function DroppableColumn({
     else setDraft(label);
   }
 
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging || isColumnDragging ? 0.4 : 1,
+  };
+
   return (
     <div
       ref={setNodeRef}
       className={isOver ? "column drop-active" : "column"}
+      style={style}
+      onContextMenu={onContextMenu}
     >
-      <div className="column-head">
+      <div className="column-head" {...attributes} {...listeners}>
         {isEditing ? (
           <input
             autoFocus
@@ -985,6 +1164,7 @@ function DroppableColumn({
               if (e.key === "Enter") commit();
               else if (e.key === "Escape") { setDraft(label); setIsEditing(false); }
             }}
+            onPointerDown={(e) => e.stopPropagation()}
           />
         ) : (
           <div
@@ -994,14 +1174,6 @@ function DroppableColumn({
             {label}
           </div>
         )}
-        <button
-          className="column-add-btn"
-          type="button"
-          onClick={() => onAddItem(bucket)}
-          aria-label="Add item"
-        >
-          +
-        </button>
       </div>
       {children}
     </div>
