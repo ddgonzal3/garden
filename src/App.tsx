@@ -63,6 +63,7 @@ function App() {
   const [columnMenu, setColumnMenu] = useState<{ bucket: number; x: number; y: number } | null>(null);
   const undoStackRef = useRef<GardenProject[]>([]);
   const redoStackRef = useRef<GardenProject[]>([]);
+  const lastMutateAtRef = useRef<number>(0);
   const dragStartBucketRef = useRef<number | null>(null);
 
   const toggleSidebar = useCallback(() => {
@@ -191,10 +192,15 @@ function App() {
     updater: (project: GardenProject) => GardenProject,
     nextSelection?: SidebarSelection,
   ) {
+    const now = Date.now();
+    // Coalesce rapid mutations (eg. native color slider firing onChange every frame)
+    // into a single undo step. Distinct user actions are separated by >250ms.
+    const coalesce = now - lastMutateAtRef.current < 250;
+    lastMutateAtRef.current = now;
+
     setBacklog((current) => {
-      // Push current project snapshot onto undo stack before mutating
       const currentProject = current.projects.find((p) => p.id === current.activeProjectId);
-      if (currentProject) {
+      if (currentProject && !coalesce) {
         undoStackRef.current = [...undoStackRef.current.slice(-49), currentProject];
         redoStackRef.current = [];
       }
@@ -218,6 +224,7 @@ function App() {
 
     const previous = stack[stack.length - 1];
     undoStackRef.current = stack.slice(0, -1);
+    lastMutateAtRef.current = 0;
 
     setBacklog((current) => {
       const currentProject = current.projects.find((p) => p.id === previous.id);
@@ -241,6 +248,7 @@ function App() {
 
     const next = stack[stack.length - 1];
     redoStackRef.current = stack.slice(0, -1);
+    lastMutateAtRef.current = 0;
 
     setBacklog((current) => {
       const currentProject = current.projects.find((p) => p.id === next.id);
