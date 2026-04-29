@@ -62,6 +62,7 @@ function App() {
   const [projectDraft, setProjectDraft] = useState("");
   const [columnMenu, setColumnMenu] = useState<{ bucket: number; x: number; y: number } | null>(null);
   const undoStackRef = useRef<GardenProject[]>([]);
+  const redoStackRef = useRef<GardenProject[]>([]);
   const dragStartBucketRef = useRef<number | null>(null);
 
   const toggleSidebar = useCallback(() => {
@@ -124,8 +125,19 @@ function App() {
   // Global keyboard handler for delete + undo + zoom
   useEffect(() => {
     function handleKeyDown(event: globalThis.KeyboardEvent) {
+      // Cmd+Shift+Z / Ctrl+Shift+Z to redo (check before undo since shift sets key to "Z")
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === "z"
+      ) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+
       // Cmd+Z / Ctrl+Z to undo (works even while editing)
-      if ((event.metaKey || event.ctrlKey) && event.key === "z") {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
         undo();
         return;
@@ -184,6 +196,7 @@ function App() {
       const currentProject = current.projects.find((p) => p.id === current.activeProjectId);
       if (currentProject) {
         undoStackRef.current = [...undoStackRef.current.slice(-49), currentProject];
+        redoStackRef.current = [];
       }
 
       return {
@@ -206,12 +219,41 @@ function App() {
     const previous = stack[stack.length - 1];
     undoStackRef.current = stack.slice(0, -1);
 
-    setBacklog((current) => ({
-      ...current,
-      projects: current.projects.map((project) =>
-        project.id === previous.id ? previous : project,
-      ),
-    }));
+    setBacklog((current) => {
+      const currentProject = current.projects.find((p) => p.id === previous.id);
+      if (currentProject) {
+        redoStackRef.current = [...redoStackRef.current.slice(-49), currentProject];
+      }
+      return {
+        ...current,
+        projects: current.projects.map((project) =>
+          project.id === previous.id ? previous : project,
+        ),
+      };
+    });
+    setEditing(null);
+    setSelectedId(null);
+  }
+
+  function redo() {
+    const stack = redoStackRef.current;
+    if (stack.length === 0) return;
+
+    const next = stack[stack.length - 1];
+    redoStackRef.current = stack.slice(0, -1);
+
+    setBacklog((current) => {
+      const currentProject = current.projects.find((p) => p.id === next.id);
+      if (currentProject) {
+        undoStackRef.current = [...undoStackRef.current.slice(-49), currentProject];
+      }
+      return {
+        ...current,
+        projects: current.projects.map((project) =>
+          project.id === next.id ? next : project,
+        ),
+      };
+    });
     setEditing(null);
     setSelectedId(null);
   }
